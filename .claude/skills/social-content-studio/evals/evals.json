@@ -18,6 +18,12 @@
       "prompt": "My reels get like 300 views and people swipe away almost immediately, avg watch time is 2 seconds on 25 sec videos. I'm a real estate agent in Phoenix. What am I doing wrong and can you rewrite this one: 'Hi everyone, I'm Dana with Sunbelt Realty, and today I want to talk about 3 things to know before buying a home in Phoenix.'",
       "expected_output": "Diagnosis pointing to the hook stage (throat-clearing intro, no visual hook) using the diagnosis tree, a rewritten script with 3 hook options and a beat table, the timing-tool flag for throat-clearing, and 2-3 concrete experiments to run next.",
       "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "we're launching a budgeting app called Penny next week, no budget for filming and nobody wants to be on camera. can you make a 15 sec animated launch video for tiktok/reels? brand colors are navy #14213D and yellow #FCA311",
+      "expected_output": "Script package with hook options and a scene table, a film.html built from scripts/motion/template.html with the brand colors, a contact-sheet review scored on the 6 criteria with fixes applied before the full render, a rendered 1080x1920 MP4 with SFX/music mixed at -14 LUFS, and no banned defaults (centered title on gradient, everything fading in).",
+      "files": []
     }
   ]
 }

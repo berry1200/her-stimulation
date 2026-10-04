@@ -105,7 +105,7 @@ Each format below gives a beat sheet, when to use it, and a mini example. Pick t
 ### 3.11 Faceless (B-roll + voice-over or text-on-screen)
 **Use for:** brands without an on-camera person, explainers, product showcases.
 **Beats:** Visual hook + text hook → VO beats over matching B-roll (a new shot every 1.5–3s) → Payoff visual → CTA.
-**Tips:** The VO script carries the retention, so write it like a story and not a brochure. Use a consistent VO voice and caption style as a brand signature. If the voice or visuals are AI-generated and realistic, label them.
+**Tips:** The VO script carries the retention, so write it like a story and not a brochure. Use a consistent VO voice and caption style as a brand signature. If the voice or visuals are AI-generated and realistic, label them. With no footage at all, render the visuals as code-drawn motion graphics (`motion-design.md`).
 
 ### 3.12 Reply to a comment / FAQ
 **Use for:** community, MOFU education, an endless supply of ideas.

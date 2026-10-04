@@ -185,3 +185,5 @@ python scripts/vertical_export.py raw.mp4 final.mp4 --dry-run              # pri
 ```
 
 `vertical_export.py` needs `ffmpeg` with libass. Run `--help` for caption styling options (font, size, colors, vertical position).
+
+For animated videos made entirely in code (no camera), see `motion-design.md` and `scripts/motion/` (renderer, beat detector, SFX/music mixer).

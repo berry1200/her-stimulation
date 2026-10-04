@@ -1,6 +1,6 @@
 ---
 name: social-content-studio
-description: Plan, script and produce social media content, especially short-form video (Instagram Reels, TikTok, YouTube Shorts, LinkedIn video), plus carousels, captions and brand strategy. Use this skill whenever the user wants a video script, hooks, reel/TikTok/Shorts ideas, a content calendar, UGC or founder-led ad scripts, Instagram captions and hashtags, a shot list or editing plan, social media branding (bio, voice, visual identity, content pillars), repurposing a long video into clips, or a diagnosis of why posts are not performing. Trigger even on casual asks like "make me a reel", "what should I post this week", "grow my Instagram", "content for my brand" or "turn this footage into a TikTok". It also turns raw footage into 9:16 vertical exports with burned-in captions via ffmpeg.
+description: Plan, script and produce social media content, especially short-form video (Instagram Reels, TikTok, YouTube Shorts, LinkedIn video), plus carousels, captions and brand strategy. Use this skill whenever the user wants a video script, hooks, reel/TikTok/Shorts ideas, a content calendar, UGC or founder-led ad scripts, Instagram captions and hashtags, a shot list or editing plan, social media branding (bio, voice, visual identity, content pillars), repurposing a long video into clips, or a diagnosis of why posts are not performing. Trigger even on casual asks like "make me a reel", "what should I post this week", "grow my Instagram", "content for my brand" or "turn this footage into a TikTok". It also makes motion graphics videos entirely in code (kinetic type, product/launch explainers, animated hooks, no footage needed) and turns raw footage into 9:16 vertical exports with burned-in captions via ffmpeg.
 ---
 
 # Social Content Studio
@@ -22,6 +22,7 @@ This skill turns a brand, product, or person into social content that gets watch
 | Branding, profile/bio, voice, visual identity, pillars | Brand brief + profile copy | `references/branding.md` |
 | Carousel, caption, static post, LinkedIn text post | Slide-by-slide copy + caption | `references/script-formats.md` (carousel & caption sections) |
 | Help filming or editing; they have footage | Shot list / edit plan / export | `references/video-production.md`, `scripts/vertical_export.py` |
+| Motion graphics / animated video with no footage (kinetic text, launch or product explainer, animated hook, "make the video for me") | Script package + rendered MP4 | `references/motion-design.md`, `scripts/motion/` |
 | "Why isn't this working?" / analytics review | Diagnosis + experiments | `references/analytics.md` |
 | Sponsored content, AI-generated visuals, music, health/finance/results claims | Flag and fix compliance issues | `references/compliance.md` |
 
@@ -96,6 +97,8 @@ python scripts/vertical_export.py input.mp4 out.mp4 --captions captions.srt   # 
 ```
 
 Timing generated from a script is approximate. If a transcription tool such as Whisper is available, prefer real word timings for captions.
+
+**No footage? Render it in code.** For kinetic type, explainers, launch videos and animated hooks, follow `references/motion-design.md`: start from `scripts/motion/template.html`, review a contact sheet before the full render, then mix SFX and music with `scripts/motion/sound.py`.
 
 If an image/video generation tool is connected (for example a Higgsfield-style MCP), you can generate B-roll, product shots or visual hooks with it. Disclose realistic AI-generated people or scenes per `references/compliance.md`.
 
