@@ -1,0 +1,23 @@
+{
+  "skill_name": "social-content-studio",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I run a small sourdough micro-bakery in Austin and sell at the Saturday farmers market. Make me an Instagram reel that people will actually share.",
+      "expected_output": "A full script package: 3 hook options of different types with one recommended, a beat-by-beat table (time, visual, voice-over, on-screen text) of roughly 30-45s, shot list, edit notes, caption with keywords, max 5 hashtags, one share-oriented CTA, platform variants, and a compliance note about music for business accounts and real cost figures.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "can u plan 2 weeks of content for my online fitness coaching biz (busy moms, home workouts). im on insta + tiktok, can film maybe 2 hrs a week on my phone",
+      "expected_output": "Stated assumptions, 3-5 pillars with funnel mix, a realistic cadence for 2 hrs/week filming (batching), an idea table (title, hook, format, pillar, funnel, why shareable), a calendar CSV based on the template, and full scripts for the top 3 ideas.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "My reels get like 300 views and people swipe away almost immediately, avg watch time is 2 seconds on 25 sec videos. I'm a real estate agent in Phoenix. What am I doing wrong and can you rewrite this one: 'Hi everyone, I'm Dana with Sunbelt Realty, and today I want to talk about 3 things to know before buying a home in Phoenix.'",
+      "expected_output": "Diagnosis pointing to the hook stage (throat-clearing intro, no visual hook) using the diagnosis tree, a rewritten script with 3 hook options and a beat table, the timing-tool flag for throat-clearing, and 2-3 concrete experiments to run next.",
+      "files": []
+    }
+  ]
+}
