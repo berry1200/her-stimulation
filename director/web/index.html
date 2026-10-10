@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Director Studio</title>
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/vendor/hyperframes-player.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Director</a>
+      <div id="project-title" class="project-title"></div>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </header>
+    <div id="banner" class="banner" hidden></div>
+    <main id="app"></main>
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>

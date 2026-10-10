@@ -1,0 +1,33 @@
+{
+  "name": "director",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI director for video: upload images, footage, documents or a script; an AI agent plans, voices, edits and renders the video with HyperFrames.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "dev": "tsx watch src/main.ts",
+    "demo": "tsx scripts/demo.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "@hono/node-server": "^2.1.4",
+    "@hyperframes/core": "0.8.145",
+    "@hyperframes/player": "0.8.145",
+    "@hyperframes/producer": "0.8.145",
+    "@hyperframes/sdk": "0.8.145",
+    "hono": "^4.13.13",
+    "hyperframes": "0.8.145",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.0"
+  }
+}
