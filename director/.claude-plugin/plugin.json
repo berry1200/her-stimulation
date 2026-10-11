@@ -1,0 +1,13 @@
+{
+  "name": "video-director",
+  "displayName": "Director",
+  "version": "0.1.0",
+  "description": "AI video studio for Claude: turn images, footage, documents and scripts into finished videos. Claude plans the storyboard, writes narration, edits clips, designs motion graphics and renders MP4s with HyperFrames, with a live preview in your browser.",
+  "author": {
+    "name": "berry1200",
+    "url": "https://github.com/berry1200"
+  },
+  "homepage": "https://github.com/berry1200/her-stimulation/tree/main/director",
+  "repository": "https://github.com/berry1200/her-stimulation",
+  "keywords": ["video", "video-editing", "motion-graphics", "hyperframes", "mcp"]
+}

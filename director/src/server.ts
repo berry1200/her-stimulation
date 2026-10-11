@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { serveStatic } from "@hono/node-server/serve-static";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { streamSSE } from "hono/streaming";
@@ -10,6 +11,7 @@ import { Director, DirectorBusyError } from "./agent/director.ts";
 import { APP_ROOT, type Config } from "./config.ts";
 import { EventBus, type DirectorEvent } from "./events.ts";
 import { supportedExtensions } from "./ingest/ingest.ts";
+import { createConnector } from "./mcp/server.ts";
 import { DEFAULT_STYLE, FORMATS, type Plan, type Scene } from "./plan/schema.ts";
 import { ProjectStore } from "./store/projects.ts";
 import { Studio } from "./studio.ts";
@@ -21,6 +23,15 @@ const ChatSchema = z.object({ message: z.string().min(1).max(8000) });
 const RenderSchema = z.object({ quality: z.enum(["draft", "standard", "high"]).default("standard") });
 /** Only these project sub-folders are served over HTTP. */
 const SERVED_DIRS = new Set(["assets", "previews", "renders", "build"]);
+const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1"]);
+
+/** Host name from a Host header ("[::1]:4321" -> "::1"). */
+function hostName(header: string | undefined): string {
+  if (!header) return "";
+  const h = header.trim().toLowerCase();
+  if (h.startsWith("[")) return h.slice(1, h.indexOf("]"));
+  return h.replace(/:\d+$/, "");
+}
 
 export interface AppContext {
   app: Hono;
@@ -42,6 +53,15 @@ export async function createApp(config: Config): Promise<AppContext> {
   app.onError((err, c) => {
     const status = err instanceof DirectorBusyError ? 409 : 500;
     return c.json({ error: err.message }, status);
+  });
+
+  // DNS-rebinding protection: while the studio listens on a loopback address, a web page
+  // that points its own domain at 127.0.0.1 must not be able to drive the API.
+  const localOnly = LOOPBACK.has(hostName(config.host));
+  app.use("*", async (c, next) => {
+    const host = hostName(c.req.header("host"));
+    if (localOnly && host && !LOOPBACK.has(host) && !config.allowedHosts.includes(host)) return c.text("Forbidden host", 403);
+    return next();
   });
 
   const projectId = async (c: Context): Promise<string> => {
@@ -262,6 +282,23 @@ export async function createApp(config: Config): Promise<AppContext> {
     return next();
   });
   app.use("/files/*", serveStatic({ root: filesRoot, rewriteRequestPath: (p) => p.replace(/^\/files/, "") }));
+
+  // ── Claude connector over HTTP (MCP streamable HTTP, stateless) ──
+  // Local clients such as Claude Code can connect to a running studio at /mcp. On a
+  // non-local address a bearer token (DIRECTOR_MCP_TOKEN) is mandatory.
+  app.all("/mcp", async (c) => {
+    if (!localOnly && !config.mcpToken) return c.json({ error: "set DIRECTOR_MCP_TOKEN to use /mcp on a non-local address" }, 403);
+    if (config.mcpToken && c.req.header("authorization") !== `Bearer ${config.mcpToken}`) return c.json({ error: "unauthorized" }, 401);
+    const origin = new URL(c.req.url).origin;
+    const server = createConnector({ studio, config, studioUrl: (id) => (id ? `${origin}/p/${id}` : origin) });
+    const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
+    await server.connect(transport);
+    try {
+      return await transport.handleRequest(c.req.raw);
+    } finally {
+      void server.close();
+    }
+  });
 
   // ── UI ──
   const webRoot = path.join(APP_ROOT, "web");

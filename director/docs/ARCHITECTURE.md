@@ -5,8 +5,9 @@ Director has four parts:
 - **Compiler:** turns the storyboard into a HyperFrames composition.
 - **Director agent:** an AI that edits the storyboard through tools.
 - **Studio server and UI:** let a person do the same by hand.
+- **Claude connector:** an MCP server that lets Claude, in Claude Code or Claude Desktop, act as the director through the same tools.
 
-Every path into a video goes through the same validation and compile step, whether it starts from a person, the API or the agent.
+Every path into a video goes through the same validation and compile step, whether it starts from a person, the API, the built-in agent or Claude through the connector.
 
 ```
  ┌──────────── web UI (web/) ────────────┐        ┌──────── Claude API ────────┐
@@ -43,7 +44,7 @@ Zod validates the shape, and `validatePlan` adds the rules Zod can't express: un
 ## Projects on disk (`src/store/projects.ts`)
 
 ```
-data/projects/<p_id>/
+~/Director/projects/<p_id>/      (DIRECTOR_DATA_DIR)
   project.json     name, format, brief, assets, plan, planVersion, custom scenes, renders
   chat.json        the director conversation, exactly as exchanged with the API
   feed.json        what the UI shows: messages, tool results, system notes
@@ -122,6 +123,26 @@ The system prompt (`prompts.ts`) sets the workflow:
 5. Render only on request.
 
 It also covers style (one idea per scene, readable text, facts only from the user's material) and boundaries. `policy.ts` screens clear-cut sexual or deepfake requests before any API call. The model handles everything else.
+
+## Claude connector (`src/mcp/`, `src/mcp.ts`, `scripts/start-mcp.mjs`)
+
+- **Server:** built on the MCP SDK's low-level `Server`. It exposes the agent's ten tools, each with a required `project_id`, plus:
+  - `director_guide`, `list_projects`, `create_project`
+  - `import_files`: local paths; hidden paths refused, symlinks resolved first, optionally limited to `DIRECTOR_IMPORT_ROOTS`
+  - `render_status`: long-polls up to 55s; `save_render`: copies the MP4 without overwriting by default
+  - a `make_video` prompt
+- **Results:** converted to MCP content, text and images. PDFs go as text plus page images rather than document blocks.
+- **Activity:** each call is written to the project feed, so the studio shows what Claude did.
+- **stdio** (`src/mcp.ts`): what Claude Code and Claude Desktop launch.
+  - Serves the studio UI in the same process, on the first free port from 4321, so the live preview follows Claude's edits through the shared event bus.
+  - Setup problems such as missing FFmpeg or busy ports go into the server instructions.
+  - stdout is reserved for the protocol.
+- **HTTP** (`/mcp` on the studio server): stateless streamable HTTP with a fresh server per request. A bearer token (`DIRECTOR_MCP_TOKEN`) is required when the studio listens on a non-local address. A Host-header check guards the whole app against DNS rebinding.
+- **Plugin:** `.claude-plugin/plugin.json`, `.mcp.json` and `skills/video-director/SKILL.md` in `director/`, plus `.claude-plugin/marketplace.json` at the repository root.
+  - The launcher runs straight from a checkout that has `node_modules`.
+  - Installed as a plugin, it copies the app into `${CLAUDE_PLUGIN_DATA}/app` and runs `npm ci` there once per lockfile, then `hyperframes browser ensure`.
+  - A first start without dependencies begins that install in the background and exits with a message to reconnect, because installing takes longer than a client waits for a server.
+- **Guidance:** `agent/prompts.ts` is split into sections. The built-in agent's system prompt and the connector's guide are assembled from the same text.
 
 ## Providers (`src/providers/`)
 

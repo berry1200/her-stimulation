@@ -9,7 +9,9 @@
   },
   "scripts": {
     "start": "tsx src/main.ts",
+    "mcp": "tsx src/mcp.ts",
     "dev": "tsx watch src/main.ts",
+    "setup": "node scripts/start-mcp.mjs --install",
     "demo": "tsx scripts/demo.ts",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
@@ -21,13 +23,14 @@
     "@hyperframes/player": "0.8.145",
     "@hyperframes/producer": "0.8.145",
     "@hyperframes/sdk": "0.8.145",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "hono": "^4.13.13",
     "hyperframes": "0.8.145",
+    "tsx": "^4.23.15",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "tsx": "^4.23.15",
     "typescript": "^5.9.0"
   }
 }

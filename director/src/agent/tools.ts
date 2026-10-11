@@ -156,7 +156,12 @@ function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   return r.data;
 }
 
-export async function runTool(studio: Studio, projectId: string, name: string, input: unknown): Promise<ToolOutcome> {
+export interface ToolOptions {
+  /** Send PDFs as document blocks (Claude API). When false, send their text and page images instead (MCP clients). */
+  pdfDocuments?: boolean;
+}
+
+export async function runTool(studio: Studio, projectId: string, name: string, input: unknown, opts: ToolOptions = {}): Promise<ToolOutcome> {
   try {
     switch (name) {
       case "get_project":
@@ -182,10 +187,14 @@ export async function runTool(studio: Studio, projectId: string, name: string, i
               blocks.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: (await readFile(path.join(dir, p))).toString("base64") } });
             }
           } else if (a.kind === "document") {
-            if (a.mime === "application/pdf" && a.bytes < 8 * 1024 * 1024) {
+            if (a.mime === "application/pdf" && a.bytes < 8 * 1024 * 1024 && opts.pdfDocuments !== false) {
               blocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: (await readFile(path.join(dir, a.file))).toString("base64") } });
             } else {
               blocks.push({ type: "text", text: (a.text ?? "(no text could be extracted)").slice(0, 20000) });
+              for (const [i, p] of (a.previews ?? []).slice(0, 4).entries()) {
+                blocks.push({ type: "text", text: `page ${i + 1}` });
+                blocks.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: (await readFile(path.join(dir, p))).toString("base64") } });
+              }
             }
           }
         }

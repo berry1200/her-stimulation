@@ -19,7 +19,69 @@ upload  ─►  ingest (probe, transcode, keyframes, text)  ─►  AI director 
 - **Edit by hand too.** The studio has a storyboard strip and a scene editor (text, duration, media, motion, transition, voiceover, order), so you can work without the AI at all.
 - **Render.** Draft, standard and high quality MP4 renders run in a queue with live progress, cancellation and downloads. Formats: 9:16, 16:9, 1:1, 4:5 at 24/30/60 fps.
 
-## Quick start
+## Use it from Claude (connector and plugin)
+
+Director includes a connector (an MCP server), so Claude itself can direct the edit from Claude Code or Claude Desktop. Claude plans the storyboard, looks at your footage, previews frames, fixes problems and renders, using your Claude plan. No API key is needed. The studio page opens alongside at http://127.0.0.1:4321 with a live preview that updates after every change Claude makes, and you can edit there too.
+
+You need Node.js 22+ and FFmpeg on your computer (macOS: `brew install ffmpeg`; Windows: `winget install ffmpeg`).
+
+**Claude Code plugin**
+
+The plugin lives on this repository's default branch once this work is merged:
+
+```
+/plugin install video-director --marketplace berry1200/her-stimulation
+```
+
+Before that, install it from a local clone instead:
+
+```bash
+claude plugin marketplace add /path/to/her-stimulation
+claude plugin install video-director@her-stimulation
+```
+
+The first start installs Director's dependencies in the background (1-3 minutes). When it finishes, reconnect the `director` server with `/mcp`. The plugin also adds a `video-director` skill that tells Claude how to run the studio.
+
+**Claude Code without the plugin**
+
+```bash
+cd director && npm install && npm run setup
+claude mcp add director -- node /absolute/path/to/director/scripts/start-mcp.mjs
+```
+
+**Claude Desktop**
+
+Run `npm install && npm run setup` in `director/`. Then open Settings → Developer → Edit Config, add the server to `claude_desktop_config.json`, and restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "director": {
+      "command": "node",
+      "args": ["/absolute/path/to/her-stimulation/director/scripts/start-mcp.mjs"]
+    }
+  }
+}
+```
+
+**What Claude can do through it**
+
+| Tool | Purpose |
+| --- | --- |
+| `director_guide` | The full workflow, scene kinds, style and motion-graphics rules |
+| `list_projects`, `create_project` | Find or start a video; returns the studio link |
+| `import_files` | Bring in local images, video, audio, documents, scripts and fonts by path |
+| `get_project`, `view_assets`, `note_asset` | Read the project and look at the material (pictures and keyframes) |
+| `save_plan`, `edit_scene`, `write_custom_scene` | Write and change the storyboard and custom motion graphics |
+| `preview` | Real frames from the cut, so Claude can check its work |
+| `generate_voiceover`, `generate_clip` | Voice and generated footage, when providers are configured |
+| `render_video`, `render_status`, `save_render` | Render the MP4 and copy it where you want |
+
+There is also a `make_video` prompt (in Claude Code: `/mcp__director__make_video`). Projects are stored in `~/Director`. A running studio (`npm start`) serves the same tools over HTTP at `http://127.0.0.1:4321/mcp`, for example `claude mcp add --transport http director http://127.0.0.1:4321/mcp`.
+
+To use Director from claude.ai in a browser or on a phone, it has to be hosted on a server with HTTPS and a sign-in. That is a separate step and is not set up yet.
+
+## Quick start (studio with its built-in agent)
 
 Requirements: Node.js 22+, FFmpeg and ffprobe, and Chrome or Chromium. Optional: `pdftotext`/`pdftoppm` (poppler-utils) for PDFs and `unzip` for DOCX.
 
@@ -47,10 +109,14 @@ If HyperFrames can't find a browser, set `HYPERFRAMES_BROWSER_PATH` to a Chrome/
 | `DIRECTOR_EFFORT` | `high` | `low`, `medium`, `high`, `xhigh` or `max`. |
 | `DIRECTOR_MAX_STEPS` | `24` | Maximum API calls (tool steps) per message. |
 | `PORT` / `HOST` | `4321` / `127.0.0.1` | Where the studio listens. |
-| `DIRECTOR_DATA_DIR` | `director/data` | Projects, uploads, builds and renders. |
+| `DIRECTOR_DATA_DIR` | `~/Director` | Projects, uploads, builds and renders. |
+| `DIRECTOR_UI` | on | `off` stops the connector from also serving the studio page. |
+| `DIRECTOR_IMPORT_ROOTS` | (any) | Folders the connector may import from, separated like `PATH`. Hidden files and folders are always refused. |
+| `DIRECTOR_MCP_TOKEN` | (none) | Bearer token for `/mcp`. Required when the studio listens on a non-local address. |
+| `DIRECTOR_ALLOWED_HOSTS` | (none) | Extra host names the studio answers to besides localhost (DNS-rebinding protection). |
 | `DIRECTOR_MAX_UPLOAD_MB` | `512` | Per-file upload limit. |
 | `HYPERFRAMES_BROWSER_PATH` | auto-detected | Chrome/Chromium used for previews and renders. |
-| `TTS_PROVIDER` | `none` | `hyperframes` (local Kokoro-82M), `elevenlabs`, or `command`. |
+| `TTS_PROVIDER` | `none` | `hyperframes` (local Kokoro-82M; `npx hyperframes doctor` shows what it needs), `elevenlabs`, or `command`. |
 | `TTS_VOICE` | `af_heart` | Voice id for the provider (an ElevenLabs voice id when using ElevenLabs). |
 | `TTS_COMMAND` | (none) | For `command`: argv template with `{text}`, `{out}`, `{voice}`. Run without a shell. |
 | `ELEVENLABS_API_KEY`, `ELEVENLABS_MODEL` | (none), `eleven_multilingual_v2` | For `elevenlabs`. |
@@ -97,11 +163,12 @@ The UI uses a small JSON API, so other tools can drive the studio too:
 | `POST/DELETE` | `/api/projects/:id/renders[/:renderId]` | Queue (`{quality}`) or cancel a render. |
 | `GET` | `/api/projects/:id/events` | Server-sent events: feed, agent, plan, assets, render. |
 | `GET` | `/files/:id/{assets,previews,build,renders}/...` | Media with range requests; `?download` for attachments. |
+| `POST` | `/mcp` | The Claude connector over MCP streamable HTTP. |
 
 ## Development
 
 ```bash
-npm test           # unit, ingest/compile, agent loop (mock Claude API) and HTTP tests, including a real render
+npm test           # unit, ingest/compile, agent loop (mock Claude API), connector (MCP client) and HTTP tests, including real renders
 npm run typecheck
 npm run dev        # restart on changes
 ```
@@ -110,7 +177,8 @@ The agent test drives the full director loop (view assets, note, save plan, prev
 
 ## Security and content notes
 
-- The studio is a single-user local tool. It binds to `127.0.0.1` and has no login. Put it behind authentication before exposing it to a network.
+- The studio is a single-user local tool. It binds to `127.0.0.1` and has no login. Put it behind authentication before exposing it to a network. While it listens locally, it only answers requests addressed to localhost, so web pages can't reach it through DNS rebinding.
+- The connector's `import_files` reads only the paths Claude passes, refuses hidden files and folders such as `~/.ssh` (symlinks are resolved first), and can be limited to chosen folders with `DIRECTOR_IMPORT_ROOTS`.
 - Uploads are allowlisted by type and stored under generated ids. File serving is limited to assets, previews, builds and renders, and path traversal is rejected.
 - Custom-scene HTML written by the model is validated before use. Scripts, embedded documents, forms and event handlers are rejected, including entity-encoded tricks. URLs are allowlisted (asset placeholders, `#fragments`, data-URI images), CSS must be scoped to its scene, and timing must fit the scene.
 - External tools run with `execFile` and argv templates, never through a shell.
@@ -119,7 +187,7 @@ The agent test drives the full director loop (view assets, note, save plan, prev
 ## Known limitations
 
 - Video in the live preview depends on the browser's codecs. Chrome, Edge, Safari and Firefox play H.264, but some bare Chromium builds don't, and video areas then preview black. Renders are not affected.
-- `TTS_PROVIDER=hyperframes` downloads the Kokoro model on first use. Kokoro voices are preset; it does not clone voices.
+- `TTS_PROVIDER=hyperframes` runs Kokoro locally. It needs a one-time setup, which `npx hyperframes doctor` reports, and the model downloads on first use. Kokoro voices are preset; it does not clone voices.
 - No model is bundled for generated video. Bring your own (see `docs/RESEARCH.md` for options and their licences).
 - Motion is CSS keyframes only. GSAP is free, but its licence excludes tools that compete with Webflow's visual builder, so this project avoids it.
 

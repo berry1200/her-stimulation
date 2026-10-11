@@ -1,5 +1,6 @@
 // Runtime configuration, read once from the environment.
 import { existsSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,7 +43,15 @@ export interface Config {
   browserPath: string;
   tts: { provider: string; voice: string; command: string; elevenLabsKey: string; elevenLabsModel: string; elevenLabsBaseUrl: string };
   genVideo: { provider: string; command: string };
+  /** Folders the Claude connector may import from (empty: any non-hidden path). */
+  importRoots: string[];
+  /** Bearer token required on /mcp; needed when the studio listens on a non-local address. */
+  mcpToken: string;
+  /** Extra Host header names accepted besides localhost (DNS-rebinding protection). */
+  allowedHosts: string[];
 }
+
+const list = (value: string): string[] => value.split(/[,;]/).map((v) => v.trim()).filter(Boolean);
 
 export function loadConfig(): Config {
   const effort = env("DIRECTOR_EFFORT", "high") as Effort;
@@ -50,7 +59,7 @@ export function loadConfig(): Config {
   return {
     port: intEnv("PORT", 4321),
     host: env("HOST", "127.0.0.1"),
-    dataDir: path.resolve(env("DIRECTOR_DATA_DIR", path.join(APP_ROOT, "data"))),
+    dataDir: path.resolve(env("DIRECTOR_DATA_DIR", path.join(os.homedir(), "Director"))),
     model: env("DIRECTOR_MODEL", "claude-opus-5-5"),
     effort: EFFORTS.includes(effort) ? effort : "high",
     maxAgentSteps: intEnv("DIRECTOR_MAX_STEPS", 24),
@@ -68,6 +77,9 @@ export function loadConfig(): Config {
       provider: env("GENVIDEO_PROVIDER", "none"),
       command: env("GENVIDEO_COMMAND"),
     },
+    importRoots: env("DIRECTOR_IMPORT_ROOTS").split(path.delimiter).map((r) => r.trim()).filter(Boolean).map((r) => path.resolve(r.replace(/^~(?=$|[\\/])/, os.homedir()))),
+    mcpToken: env("DIRECTOR_MCP_TOKEN"),
+    allowedHosts: list(env("DIRECTOR_ALLOWED_HOSTS")).map((h) => h.toLowerCase()),
   };
 }
 

@@ -1,4 +1,4 @@
-// Projects live on disk: data/projects/<id>/{project.json, chat.json, assets/, build/, renders/}.
+// Projects live on disk: <DIRECTOR_DATA_DIR>/projects/<id>/{project.json, chat.json, assets/, build/, renders/}.
 // Writes are atomic (temp file + rename) and serialized per project.
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
