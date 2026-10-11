@@ -16,6 +16,13 @@ import { cpSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFil
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Desktop apps on macOS start servers with a minimal PATH; add Homebrew's folders so FFmpeg is found.
+if (process.platform === "darwin") {
+  const dirs = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  for (const dir of ["/opt/homebrew/bin", "/usr/local/bin"]) if (!dirs.includes(dir)) dirs.push(dir);
+  process.env.PATH = dirs.join(path.delimiter);
+}
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const pluginData = process.env.CLAUDE_PLUGIN_DATA;
 const installOnly = process.argv.includes("--install");
