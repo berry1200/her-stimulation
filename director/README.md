@@ -9,6 +9,10 @@ upload  ─►  ingest (probe, transcode, keyframes, text)  ─►  AI director 
             MP4  ◄─  HyperFrames render  ◄─  lint  ◄─  compile storyboard → HTML composition  ─►  live preview
 ```
 
+![The Director studio while Claude edits through the connector: assets on the left, live preview and scene strip in the middle, Claude's actions on the right](docs/images/studio.png)
+
+![Five frames from a 16-second reel Claude made through the connector: title, custom motion graphic, stat, list and call to action](docs/images/reel-frames.png)
+
 ## What it does
 
 - **Bring anything.** Accepts images, video (anything FFmpeg reads; formats a browser can't play are transcoded to H.264), audio, PDF, DOCX, Markdown, HTML, plain-text scripts, and fonts. Documents are turned into text the director can read, and videos get keyframes it can look at.
