@@ -75,8 +75,9 @@ export async function compileProject(input: CompileInput): Promise<CompileResult
   for (const s of plan.scenes) {
     if (s.kind === "custom") {
       const html = input.customScenes[s.id];
+      // A new custom scene is saved before its HTML exists; it shows as a placeholder until then.
       if (!html) {
-        errors.push(`scene "${s.id}" is custom but has no HTML; call write_custom_scene for it`);
+        warnings.push(`scene "${s.id}" is custom but has no HTML yet; it shows as a placeholder until write_custom_scene sets it`);
         continue;
       }
       const check = checkCustomHtml(html, s.duration, sceneCompositionId(s.id));
@@ -118,7 +119,8 @@ export async function compileProject(input: CompileInput): Promise<CompileResult
     let body: string;
     let css: string;
     if (scene.kind === "custom") {
-      const resolved = resolveAssetPlaceholders(input.customScenes[scene.id] ?? "", (id) => resolve(id)?.src);
+      const html = input.customScenes[scene.id] || `<div id="${cid}-placeholder" class="clip" data-start="0" data-duration="${scene.duration}" data-track-index="0"></div>`;
+      const resolved = resolveAssetPlaceholders(html, (id) => resolve(id)?.src);
       if (resolved.missing.length) warnings.push(`scene "${scene.id}": unknown assets ${resolved.missing.join(", ")}`);
       body = resolved.html;
       css = "";

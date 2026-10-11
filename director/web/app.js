@@ -450,7 +450,7 @@ function renderFeed() {
   try {
     health = await api("GET", "/api/health");
     if (!health.claude) {
-      banner.textContent = "Claude API is not configured: set ANTHROPIC_API_KEY and restart to enable the AI director. You can still build storyboards by hand.";
+      banner.textContent = "The chat on this page needs ANTHROPIC_API_KEY. Claude can still direct this studio through the Director connector (Claude Code or Claude Desktop), and you can edit by hand.";
       banner.hidden = false;
     }
   } catch {

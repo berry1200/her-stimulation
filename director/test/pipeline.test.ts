@@ -95,6 +95,17 @@ describe("ingest and compile", () => {
     assert.equal(project.id, projectId);
   });
 
+  it("compiles a custom scene without HTML yet as a placeholder", async () => {
+    const plan: Plan = {
+      title: "x", format: "1:1", fps: 30,
+      style: { palette: { background: "#000000", surface: "#111111", text: "#ffffff", muted: "#aaaaaa", accent: "#ff5722" }, fontHeading: "sans", fontBody: "sans" },
+      scenes: [{ id: "art", kind: "custom", duration: 2 }],
+    };
+    const r = await compileProject({ plan, assets: [], customScenes: {}, projectDir: store.dir(projectId), buildDir: path.join(store.dir(projectId), "build3") });
+    assert.equal(r.ok, true, r.errors.join("\n"));
+    assert.match(r.warnings.join(" "), /placeholder/);
+  });
+
   it("reports missing assets instead of compiling", async () => {
     const plan: Plan = {
       title: "x",
