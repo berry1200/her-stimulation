@@ -6,6 +6,7 @@ export type DirectorEvent =
   | { type: "agent"; state: "thinking" | "idle" | "error"; detail?: string }
   | { type: "plan"; version: number }
   | { type: "assets" }
+  | { type: "thumbs"; version: number }
   | { type: "render"; id: string; status: string; progress: number; message: string; file?: string };
 
 export class EventBus {

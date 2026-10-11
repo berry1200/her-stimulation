@@ -95,6 +95,37 @@ describe("ingest and compile", () => {
     assert.equal(project.id, projectId);
   });
 
+  it("adds the film look, letterbox-safe text and the new moves and transitions", async () => {
+    const plan: Plan = {
+      title: "Trailer", format: "16:9", fps: 24,
+      style: { palette: { background: "#000000", surface: "#111111", text: "#ffffff", muted: "#aaaaaa", accent: "#c6f432" }, fontHeading: "sans", fontBody: "sans",
+        look: { grade: "cinematic", grain: 0.5, vignette: 0.6, letterbox: true } },
+      scenes: [
+        { id: "open", kind: "media", duration: 2, media: { assetId: assets.photo!.id, motion: "crash-zoom" }, heading: "Coming soon", voiceover: "This summer.", transition: "whip" },
+        { id: "end", kind: "title", duration: 2, heading: "In cinemas", transition: "flash" },
+      ],
+    };
+    const buildDir = path.join(store.dir(projectId), "build4");
+    const r = await compileProject({ plan, assets: Object.values(assets), customScenes: {}, projectDir: store.dir(projectId), buildDir });
+    assert.equal(r.ok, true, r.errors.join("\n"));
+    const index = await readFile(path.join(buildDir, "index.html"), "utf8");
+    assert.match(index, /#root \{ filter: contrast/);
+    for (const id of ["look-tint", "look-vignette", "look-grain", "look-bars"]) assert.match(index, new RegExp(`id="${id}" class="clip"`));
+    assert.match(index, /border-top: 138px solid #000/); // (1080 - 1920 / 2.39) / 2
+    const open = await readFile(path.join(buildDir, "compositions", "open.html"), "utf8");
+    assert.match(open, /s-open-m-kb[\s\S]*scale\(1\.3\)/);
+    assert.match(open, /:not\(\[data-composition-src\]\) \{ animation: s-open-whip/);
+    assert.doesNotMatch(open, /id="s-open-cover"/);
+    // Captions sit above the bottom bar.
+    const capTop = Number(/\[id\^="s-open-cap"\] \{ position: absolute; top: (\d+)px/.exec(open)?.[1]);
+    assert.ok(capTop + 60 < 1080 - 138, `captions at ${capTop}px`);
+    const end = await readFile(path.join(buildDir, "compositions", "end.html"), "utf8");
+    assert.match(end, /#s-end-cover \{[^}]*background: #ffffff/);
+    // Letterbox is skipped, with a warning, on vertical video.
+    const vertical = await compileProject({ plan: { ...plan, format: "9:16" }, assets: Object.values(assets), customScenes: {}, projectDir: store.dir(projectId), buildDir: path.join(store.dir(projectId), "build5") });
+    assert.match(vertical.warnings.join(" "), /letterbox applies to 16:9/);
+  });
+
   it("compiles a custom scene without HTML yet as a placeholder", async () => {
     const plan: Plan = {
       title: "x", format: "1:1", fps: 30,

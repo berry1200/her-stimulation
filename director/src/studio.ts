@@ -10,11 +10,15 @@ import { round } from "./compile/text.ts";
 import type { EventBus } from "./events.ts";
 import { ingestFile } from "./ingest/ingest.ts";
 import { probe } from "./ingest/media.ts";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { referencedAssets, SceneSchema, totalDuration, validatePlan, type Plan, type PlanIssue } from "./plan/schema.ts";
 import { createGenVideo, type GenVideoProvider } from "./providers/genvideo.ts";
 import { createTts, type TtsProvider } from "./providers/tts.ts";
 import { lint, render, snapshot, type LintFinding } from "./render/hyperframes.ts";
 import { newId, type Asset, type FeedEntry, type Project, type ProjectStore, type RenderRecord } from "./store/projects.ts";
+
+const run = promisify(execFile);
 
 export interface BuildReport {
   ok: boolean;
@@ -35,6 +39,8 @@ export class Studio {
   /** Storyboard as it was when each render was queued, so later edits don't change a queued render. */
   private readonly queuedPlans = new Map<string, { plan: Plan; customScenes: Record<string, string> }>();
   private readonly locks = new Map<string, Promise<unknown>>();
+  private readonly thumbTimers = new Map<string, NodeJS.Timeout>();
+  private readonly thumbJobs = new Map<string, Promise<unknown>>();
 
   constructor(
     readonly config: Config,
@@ -137,6 +143,7 @@ export class Studio {
       p.planVersion += 1;
     });
     this.bus.publish(projectId, { type: "plan", version: saved.planVersion });
+    this.scheduleThumbs(projectId);
     return { ...report, planVersion: saved.planVersion };
   }
 
@@ -219,6 +226,53 @@ export class Studio {
       if (!p.plan) return { ok: false, errors: ["no storyboard yet"], warnings: [] };
       return this.build(projectId, p.plan, p.assets, p.customScenes);
     });
+  }
+
+  // ── Storyboard thumbnails ──
+  /** Refresh the scene thumbnails shortly after the last save (edits often come in bursts). */
+  private scheduleThumbs(projectId: string): void {
+    if (!this.config.thumbnails) return;
+    clearTimeout(this.thumbTimers.get(projectId));
+    this.thumbTimers.set(projectId, setTimeout(() => {
+      this.thumbTimers.delete(projectId);
+      const job = (this.thumbJobs.get(projectId) ?? Promise.resolve()).then(() => this.makeThumbs(projectId)).catch(() => undefined);
+      this.thumbJobs.set(projectId, job);
+    }, 1200).unref());
+  }
+
+  /** One small frame per scene, compiled into its own folder so it never holds up edits or reads a build mid-swap. */
+  private async makeThumbs(projectId: string): Promise<void> {
+    const p = await this.store.get(projectId);
+    if (!p.plan || p.thumbs?.version === p.planVersion) return;
+    const version = p.planVersion;
+    const dir = this.store.dir(projectId);
+    const work = path.join(dir, "tmp", `thumbs-${version}`);
+    const outDir = path.join(dir, "previews", "thumbs");
+    try {
+      const built = await compileProject({ plan: p.plan, assets: p.assets, customScenes: p.customScenes, projectDir: dir, buildDir: work });
+      if (!built.ok) return;
+      const scenes = p.plan.scenes.slice(0, 24);
+      const times = built.timeline.slice(0, 24).map((s) => s.start + Math.min(s.duration - 0.1, Math.max(0.8, s.duration * 0.6)));
+      const frames = await snapshot(this.config, work, times, path.join(work, "frames"));
+      await mkdir(outDir, { recursive: true });
+      const files: Record<string, string> = {};
+      for (const [i, frame] of frames.entries()) {
+        const scene = scenes[i];
+        if (!scene) continue;
+        const out = path.join(outDir, `v${version}-${scene.id}.jpg`);
+        await run("ffmpeg", ["-v", "error", "-y", "-i", frame, "-vf", "scale=320:-2", "-q:v", "4", out]);
+        files[scene.id] = path.relative(dir, out);
+      }
+      const current = await this.store.update(projectId, (proj) => {
+        if ((proj.thumbs?.version ?? -1) < version) proj.thumbs = { version, files };
+      });
+      // Drop thumbnails from older versions.
+      const keep = new Set(Object.values(current.thumbs?.files ?? {}).map((f) => path.basename(f)));
+      for (const f of await readdir(outDir)) if (!keep.has(f)) await rm(path.join(outDir, f), { force: true });
+      this.bus.publish(projectId, { type: "thumbs", version });
+    } finally {
+      await rm(work, { recursive: true, force: true });
+    }
   }
 
   // ── Preview frames for review ──
@@ -361,6 +415,7 @@ export class Studio {
       let last = -1;
       await render(this.config, workDir, path.join(this.store.dir(projectId), file), {
         quality: record.quality,
+        format: queued.plan.format,
         signal,
         onProgress: (pct, message) => {
           if (pct - last >= 2 || pct === 100) {

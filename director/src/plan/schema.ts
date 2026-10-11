@@ -24,8 +24,9 @@ const assetId = z.string().regex(/^a_[a-z0-9]{4,16}$/, "an asset id such as a_7f
 const font = z.union([z.enum(["sans", "serif", "mono", "rounded"]), z.string().regex(/^asset:a_[a-z0-9]{4,16}$/)]);
 
 export const TEXT_MOTIONS = ["rise", "fade", "scale", "slide-left", "blur", "words", "none"] as const;
-export const MEDIA_MOTIONS = ["zoom-in", "zoom-out", "pan-left", "pan-right", "pan-up", "none"] as const;
-export const TRANSITIONS = ["cut", "fade", "slide-up", "zoom", "wipe"] as const;
+export const MEDIA_MOTIONS = ["zoom-in", "zoom-out", "pan-left", "pan-right", "pan-up", "dolly-in", "crash-zoom", "drift", "none"] as const;
+export const TRANSITIONS = ["cut", "fade", "slide-up", "zoom", "wipe", "flash", "whip"] as const;
+export const GRADES = ["none", "cinematic", "noir", "warm", "cool", "vivid", "matte"] as const;
 export const SCENE_KINDS = ["title", "statement", "media", "list", "stat", "quote", "cta", "custom"] as const;
 
 export const MediaSchema = z.object({
@@ -87,6 +88,15 @@ export const StyleSchema = z.object({
   fontBody: font,
   /** Corner radius for cards and panels, in px at 1080 wide. */
   radius: z.number().min(0).max(80).optional(),
+  /** Film finish over the whole video: colour grade, grain, vignette and (16:9 only) 2.39:1 letterbox bars. */
+  look: z
+    .object({
+      grade: z.enum(GRADES).optional(),
+      grain: z.number().min(0).max(1).optional(),
+      vignette: z.number().min(0).max(1).optional(),
+      letterbox: z.boolean().optional(),
+    })
+    .optional(),
   mood: z.string().max(200).optional(),
 });
 

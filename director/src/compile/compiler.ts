@@ -8,6 +8,7 @@ import path from "node:path";
 import { FONT_PRESETS, FORMATS, referencedAssets, totalDuration, type Plan } from "../plan/schema.ts";
 import type { Asset } from "../store/projects.ts";
 import { checkCustomHtml, resolveAssetPlaceholders } from "./custom.ts";
+import { lookLayers } from "./motion.ts";
 import { renderScene, type ResolvedAsset } from "./scenes.ts";
 import { escapeHtml, round } from "./text.ts";
 
@@ -109,6 +110,14 @@ export async function compileProject(input: CompileInput): Promise<CompileResult
     .map((a) => `@font-face { font-family: "brand-${a.id}"; src: url("assets/${path.basename(a.file)}"); font-display: block; }`)
     .join("\n");
 
+  // Letterbox bars only make sense on a landscape frame: crop 16:9 to about 2.39:1.
+  const look = plan.style.look;
+  let bar = 0;
+  if (look?.letterbox) {
+    if (width > height) bar = Math.max(0, Math.round((height - width / 2.39) / 2));
+    else warnings.push("letterbox applies to 16:9 videos only; it was skipped for this format");
+  }
+
   const timeline: CompileResult["timeline"] = [];
   const hosts: string[] = [];
   const audio: string[] = [];
@@ -125,7 +134,7 @@ export async function compileProject(input: CompileInput): Promise<CompileResult
       body = resolved.html;
       css = "";
     } else {
-      const out = renderScene({ cid, scene, plan, width, height, fontHeading, fontBody, resolve, voiceoverSeconds: vo?.duration, warnings });
+      const out = renderScene({ cid, scene, plan, width, height, fontHeading, fontBody, resolve, voiceoverSeconds: vo?.duration, warnings, bar });
       body = out.body;
       css = out.css;
     }
@@ -175,6 +184,8 @@ ${css}
     }
   }
 
+  const finish = lookLayers(look, total, width, height, bar);
+
   const index = `<!doctype html>
 <html lang="en">
   <head>
@@ -185,11 +196,13 @@ ${css}
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: ${width}px; height: ${height}px; overflow: hidden; background: ${plan.style.palette.background}; }
       ${fontFaces}
+      ${finish.rootCss}
+      ${finish.css}
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="${total}" data-width="${width}" data-height="${height}" data-fps="${plan.fps}" data-no-timeline>
-      ${[...hosts, ...audio].join("\n      ")}
+      ${[...hosts, ...finish.html, ...audio].join("\n      ")}
     </div>
   </body>
 </html>

@@ -8,13 +8,14 @@ const STUDIO = `## How the studio works
 - Scene kinds:
   - title: heading (+ optional body), optional background image/video with a darkening overlay.
   - statement: one strong line, revealed word by word by default.
-  - media: an uploaded image or video, full-bleed, with optional lower-third text. media.start trims into a video (seconds); keep start + duration inside the clip. Images get a slow camera move (media.motion). Set media.withAudio only when the clip's own sound matters.
+  - media: an uploaded image or video, full-bleed, with optional lower-third text. media.start trims into a video (seconds); keep start + duration inside the clip. media.motion is the camera move: zoom-in, zoom-out, pan-left, pan-right, pan-up, dolly-in (slow eased push), crash-zoom (fast punch-in that settles), drift (slow floating move) or none; images default to zoom-in. Set media.withAudio only when the clip's own sound matters.
   - list: heading + up to 6 short items revealed one by one.
   - stat: an animated number with prefix/suffix and a label.
   - quote: a quotation with attribution.
   - cta: the closing call to action; items[0] becomes the button and media can be a logo image.
   - custom: your own HTML/CSS motion graphic, written with write_custom_scene (see below).
-- Every scene can set textMotion, transition (how it enters), background, voiceover and captions.
+- Every scene can set textMotion, transition (how it enters: cut, fade, slide-up, zoom, wipe, flash or whip), background, voiceover and captions.
+- Film finish: plan.style.look applies to the whole video: grade (cinematic, noir, warm, cool, vivid, matte), grain and vignette (0-1), and letterbox (2.39:1 bars, 16:9 only).
 - Narration goes in scene.voiceover; captions are generated from it. If a voice provider is available, generate_voiceover turns the lines into audio and lengthens scenes that are too short for their line. Without one, the narration still shows as captions and the user can upload a recording (set voiceoverAssetId to it).
 - Music: plan.music uses an uploaded audio asset and is automatically quieter under narration.
 - Asset ids look like a_xxxxxxxx. Use only ids that exist in the project state.`;
@@ -28,6 +29,7 @@ const WORKFLOW = `## How to work
 
 const STYLE = `## Style
 - Choose a palette and fonts that suit the brand or mood and keep them consistent; keep text contrast high.
+- For a cinematic feel: one look for the whole film (a grade with light grain and vignette; letterbox for 16:9 trailers), slow dolly-in or drift on hero shots, crash-zoom, flash or whip only on energy beats, and very little on-screen text.
 - Prefer the user's own media. Fill gaps with typographic and custom motion-graphics scenes. Use generate_clip only when a provider is available and the user wants generated footage, and say which shots are AI-generated.
 - Write narration as natural speech, about 2.5 words per second, and give each scene a beat to breathe after its line.
 - Only state facts, numbers, quotes and testimonials that come from the user's material. If something is needed but missing, ask, or mark it clearly as a placeholder.`;

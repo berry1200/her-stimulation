@@ -39,7 +39,7 @@ const READ_ONLY = new Set(["director_guide", "list_projects", "get_project", "vi
 
 const OVERRIDES: Record<string, string> = {
   write_custom_scene: `Set the HTML of a scene whose kind is "custom". Add the scene to the plan first.\n\n${CUSTOM_SCENE_RULES}`,
-  render_video: "Render the saved storyboard to an MP4 in the background. Use draft for quick checks and high for the final. Follow up with render_status, then save_render to deliver the file.",
+  render_video: "Render the saved storyboard to an MP4 in the background. Use draft for quick checks, high for the final and 4k for a 4K master (16:9, 9:16 and 1:1). Follow up with render_status, then save_render to deliver the file.",
 };
 
 function projectTools(): Tool[] {

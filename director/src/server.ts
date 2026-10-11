@@ -20,7 +20,7 @@ const FormatSchema = z.enum(["9:16", "16:9", "1:1", "4:5"]);
 const CreateSchema = z.object({ name: z.string().max(120).default("Untitled video"), format: FormatSchema.default("9:16"), brief: z.string().max(4000).default("") });
 const PatchSchema = z.object({ name: z.string().max(120).optional(), brief: z.string().max(4000).optional(), format: FormatSchema.optional() });
 const ChatSchema = z.object({ message: z.string().min(1).max(8000) });
-const RenderSchema = z.object({ quality: z.enum(["draft", "standard", "high"]).default("standard") });
+const RenderSchema = z.object({ quality: z.enum(["draft", "standard", "high", "4k"]).default("standard") });
 /** Only these project sub-folders are served over HTTP. */
 const SERVED_DIRS = new Set(["assets", "previews", "renders", "build"]);
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1"]);
@@ -97,7 +97,12 @@ export async function createApp(config: Config): Promise<AppContext> {
   );
 
   // ── Projects ──
-  app.get("/api/projects", guard(async (c) => c.json((await store.list()).map((p) => ({ id: p.id, name: p.name, format: p.format, updatedAt: p.updatedAt, scenes: p.plan?.scenes.length ?? 0, assets: p.assets.length })))));
+  app.get("/api/projects", guard(async (c) => c.json((await store.list()).map((p) => {
+    const first = p.plan?.scenes[0]?.id;
+    const cover = first ? p.thumbs?.files[first] : undefined;
+    const seconds = p.plan ? p.plan.scenes.reduce((sum, s) => sum + s.duration, 0) : 0;
+    return { id: p.id, name: p.name, format: p.format, updatedAt: p.updatedAt, scenes: p.plan?.scenes.length ?? 0, assets: p.assets.length, seconds, cover: cover ? `/files/${p.id}/${cover}` : null };
+  }))));
 
   app.post("/api/projects", guard(async (c) => {
     const body = CreateSchema.parse(await c.req.json().catch(() => ({})));

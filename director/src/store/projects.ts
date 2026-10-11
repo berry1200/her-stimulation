@@ -37,7 +37,7 @@ export interface RenderRecord {
   status: "queued" | "rendering" | "done" | "failed";
   progress: number;
   message: string;
-  quality: "draft" | "standard" | "high";
+  quality: "draft" | "standard" | "high" | "4k";
   planVersion: number;
   file?: string;
   error?: string;
@@ -56,6 +56,8 @@ export interface Project {
   /** Raw HTML of custom scenes, keyed by scene id. */
   customScenes: Record<string, string>;
   planVersion: number;
+  /** Small frame per scene for the storyboard strip, from the build of `version`. */
+  thumbs?: { version: number; files: Record<string, string> };
   renders: RenderRecord[];
   createdAt: string;
   updatedAt: string;

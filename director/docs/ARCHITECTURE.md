@@ -72,9 +72,10 @@ Writes are atomic: the file is written to a temp path and renamed into place. A 
 - **Text** is sized to fit: `fitFontSize` estimates line wrapping for the frame width and shrinks text within a range. Captions are chunked from the narration (at most 34 characters or 6 words, breaking at punctuation) and timed across the voiceover span.
 - **Motion** is CSS keyframes, which HyperFrames seeks frame-accurately:
   - text entrances: rise, fade, scale, slide-left, blur, words
-  - camera moves on stills: Ken Burns zoom and pan
+  - camera moves: Ken Burns zoom and pan, dolly-in, crash-zoom and drift
   - stat counters: `@property` integer interpolation
-  - transitions: a cover element that fades, slides, irises or wipes
+  - transitions: a cover element that fades, slides, irises, wipes or flashes; a whip moves the scene itself in with motion blur
+  - film look (`style.look`): a grade as a filter on the root plus an optional soft-light tint, then grain, vignette and letterbox bars as full-length clips on tracks 10-13; letterbox also moves the text safe areas inside the bars
 - **Custom scenes** are HTML the agent writes. They run in the render browser and in the same-origin preview, so `checkCustomHtml` is strict:
   - It rejects scripts, embedded documents, forms, `<link>`/`<meta>`/`<base>`, `on*` handlers, script URLs, `@import` and nested compositions. These checks also run on entity-decoded text, so encoded payloads can't slip through.
   - URLs are allowlisted. `src`/`href`/`poster` and CSS `url()` may only be `{{asset:a_…}}` placeholders, `#fragments` or data-URI images; CSS escapes and URL-taking CSS functions are rejected.
@@ -89,7 +90,8 @@ After compiling, the studio runs `hyperframes lint`. Errors block the save and g
 
 - **Live preview:** the UI embeds `<hyperframes-player>` pointed at `build/index.html`. The server provides the player and the runtime it injects, so previews work offline.
 - **Agent preview:** the agent's `preview` tool runs `hyperframes snapshot --at …` and gets PNG frames back. Frames are downscaled before they are sent to the model.
-- **Render:** `hyperframes render --quality draft|standard|high`. Renders run one at a time in a queue. `@hf-progress` lines become SSE progress events, and a cancel aborts the child process. The CLI runs as a child process, so a browser crash can't take the server down.
+- **Render:** `hyperframes render --quality draft|standard|high`, or `4k` (high quality at HyperFrames' 2x resolution preset for 16:9, 9:16 and 1:1). Renders run one at a time in a queue. `@hf-progress` lines become SSE progress events, and a cancel aborts the child process. The CLI runs as a child process, so a browser crash can't take the server down.
+- **Thumbnails:** after each save (debounced), the studio compiles the storyboard into its own folder, snapshots one frame per scene and stores small JPEGs for the strip and the project cards. This never holds the edit lock, so it doesn't slow down Claude or the editor.
 
 ## Director agent (`src/agent/`)
 

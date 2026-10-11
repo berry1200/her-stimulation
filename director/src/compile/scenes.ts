@@ -26,6 +26,8 @@ export interface SceneContext {
   /** Seconds of narration audio, when a voiceover asset is attached. */
   voiceoverSeconds?: number;
   warnings: string[];
+  /** Letterbox bar height in px (0 when there are no bars). */
+  bar?: number;
 }
 
 interface Block {
@@ -41,19 +43,20 @@ function clip(cid: string, key: string, track: number, start: number, duration: 
   return `<${tag} id="${cid}-${key}" class="clip" data-start="${round(start)}" data-duration="${round(duration)}" data-track-index="${track}"${extra}>${inner}</${tag}>`;
 }
 
-export function layoutFor(width: number, height: number) {
+/** Safe areas for text. `bar` is the height of letterbox bars, which text must stay inside of. */
+export function layoutFor(width: number, height: number, bar = 0) {
   const unit = Math.min(width, height) / 1080;
   const vertical = height > width * 1.2;
   const marginX = Math.round(width * (vertical ? 0.08 : 0.07));
-  const top = Math.round(height * (vertical ? 0.13 : 0.1));
+  const top = Math.max(Math.round(height * (vertical ? 0.13 : 0.1)), bar + Math.round(height * 0.05));
   // Vertical video keeps clear of the platform UI along the bottom edge.
-  const captionTop = Math.round(height * (vertical ? 0.7 : 0.82));
+  const captionTop = Math.min(Math.round(height * (vertical ? 0.7 : 0.82)), height - bar - Math.round(110 * unit));
   const bottom = captionTop - Math.round(24 * unit);
   return { unit, vertical, marginX, boxWidth: width - 2 * marginX, top, bottom, captionTop };
 }
 
 function textBlock(ctx: SceneContext, key: string, text: string, opts: { maxSize: number; minSize: number; maxLines: number; weight: number; font: string; color: string; delayMs: number; motion: TextMotion; italic?: boolean; align?: "center" | "left"; lineHeight?: number }): Block {
-  const L = layoutFor(ctx.width, ctx.height);
+  const L = layoutFor(ctx.width, ctx.height, ctx.bar ?? 0);
   const { size, fits } = fitFontSize(text, L.boxWidth, opts.maxLines, opts.maxSize * L.unit, opts.minSize * L.unit);
   if (!fits) ctx.warnings.push(`scene "${ctx.scene.id}": ${key} text is long and was set at the minimum size; consider shortening it`);
   const lh = opts.lineHeight ?? 1.12;
@@ -127,7 +130,7 @@ function mediaElement(cid: string, key: string, a: ResolvedAsset, duration: numb
 function captions(ctx: SceneContext): { html: string[]; css: string[] } {
   const { cid, scene } = ctx;
   if (!scene.voiceover || scene.captions === false) return { html: [], css: [] };
-  const L = layoutFor(ctx.width, ctx.height);
+  const L = layoutFor(ctx.width, ctx.height, ctx.bar ?? 0);
   const lead = 0.25;
   const span = Math.max(0.5, Math.min(ctx.voiceoverSeconds ?? scene.duration - lead - 0.3, scene.duration - lead - 0.1));
   const cues = timeCues(captionChunks(scene.voiceover), lead, span);
@@ -152,7 +155,7 @@ export interface SceneOutput {
 export function renderScene(ctx: SceneContext): SceneOutput {
   const { cid, scene, plan } = ctx;
   const p = plan.style.palette;
-  const L = layoutFor(ctx.width, ctx.height);
+  const L = layoutFor(ctx.width, ctx.height, ctx.bar ?? 0);
   const motion: TextMotion = scene.textMotion ?? (scene.kind === "statement" ? "words" : "rise");
   const html: string[] = [];
   const css: string[] = [textKeyframes(cid, L.unit)];
@@ -308,7 +311,7 @@ export function renderScene(ctx: SceneContext): SceneOutput {
   const coverColor = transition === "wipe" || transition === "slide-up" ? p.accent : p.background;
   const t = transitionCss(cid, transition, coverColor);
   if (t.duration > 0) {
-    html.push(clip(cid, "cover", TRACK.cover, 0, Math.min(t.duration, scene.duration), ""));
+    if (transition !== "whip") html.push(clip(cid, "cover", TRACK.cover, 0, Math.min(t.duration, scene.duration), ""));
     css.push(t.css);
   }
   return { body: html.join("\n    "), css: css.filter(Boolean).join("\n") };

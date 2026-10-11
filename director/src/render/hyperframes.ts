@@ -79,14 +79,19 @@ export async function snapshot(config: Config, buildDir: string, times: number[]
 }
 
 export interface RenderOptions {
-  quality: "draft" | "standard" | "high";
+  quality: "draft" | "standard" | "high" | "4k";
+  /** Composition format, used to pick the 4K resolution preset. */
+  format?: string;
   onProgress?: (pct: number, message: string) => void;
   signal?: AbortSignal;
 }
 
 /** Render the project in `buildDir` to `outFile` (MP4). */
 export async function render(config: Config, buildDir: string, outFile: string, opts: RenderOptions): Promise<void> {
-  const r = await runCli(config, ["render", "--output", outFile, "--quality", opts.quality], buildDir, {
+  // 4K renders the same composition at twice the pixel density (HyperFrames' integer-scale presets).
+  const preset: Record<string, string> = { "16:9": "landscape-4k", "9:16": "portrait-4k", "1:1": "square-4k" };
+  const quality = opts.quality === "4k" ? ["--quality", "high", ...(opts.format && preset[opts.format] ? ["--resolution", preset[opts.format]!] : [])] : ["--quality", opts.quality];
+  const r = await runCli(config, ["render", "--output", outFile, ...quality], buildDir, {
     timeoutMs: 2 * 60 * 60 * 1000,
     signal: opts.signal,
     onLine: (line) => {

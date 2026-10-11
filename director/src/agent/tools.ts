@@ -117,10 +117,10 @@ export function toolDefinitions(): Anthropic.Beta.BetaTool[] {
     },
     {
       name: "render_video",
-      description: "Render the saved storyboard to an MP4 the user can download. Runs in the background; progress shows in the studio. Use draft for quick checks, high for the final.",
+      description: "Render the saved storyboard to an MP4 the user can download. Runs in the background; progress shows in the studio. Use draft for quick checks, high for the final, 4k for a 4K master (16:9, 9:16 and 1:1).",
       input_schema: {
         type: "object",
-        properties: { quality: { type: "string", enum: ["draft", "standard", "high"] } },
+        properties: { quality: { type: "string", enum: ["draft", "standard", "high", "4k"] } },
         required: ["quality"],
         additionalProperties: false,
       },
@@ -136,7 +136,7 @@ const CustomInput = z.object({ scene_id: z.string(), html: z.string().max(60000)
 const PreviewInput = z.object({ times: z.array(z.number().min(0)).max(8).optional() });
 const VoiceInput = z.object({ scene_ids: z.array(z.string()).optional() });
 const ClipInput = z.object({ prompt: z.string().min(3).max(1500), seconds: z.number().min(2).max(10), image_asset_id: z.string().optional() });
-const RenderInput = z.object({ quality: z.enum(["draft", "standard", "high"]) });
+const RenderInput = z.object({ quality: z.enum(["draft", "standard", "high", "4k"]) });
 
 async function jpegBase64(file: string, width: number): Promise<string> {
   const out = `${file}.${width}.jpg`;

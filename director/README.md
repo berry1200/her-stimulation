@@ -9,7 +9,9 @@ upload  ─►  ingest (probe, transcode, keyframes, text)  ─►  AI director 
             MP4  ◄─  HyperFrames render  ◄─  lint  ◄─  compile storyboard → HTML composition  ─►  live preview
 ```
 
-![The Director studio while Claude edits through the connector: assets on the left, live preview and scene strip in the middle, Claude's actions on the right](docs/images/studio.png)
+![The Director studio in light mode while Claude edits through the connector: assets on the left, the dark preview stage, film-look bar and thumbnail strip in the middle, Claude's actions on the right](docs/images/studio.png)
+
+![The same studio in dark mode](docs/images/studio-dark.png)
 
 ![Five frames from a 16-second reel Claude made through the connector: title, custom motion graphic, stat, list and call to action](docs/images/reel-frames.png)
 
@@ -20,8 +22,15 @@ upload  ─►  ingest (probe, transcode, keyframes, text)  ─►  AI director 
 - **Scene templates.** Title, statement (word-by-word reveal), media (full-bleed photo or clip with Ken Burns motion and trims), list, animated stat counter, quote, call to action, and **custom** scenes where the director writes its own HTML/CSS motion graphics. Custom scenes are sandboxed: no scripts, no remote URLs.
 - **Voice and captions.** Narration per scene becomes timed captions. With a voice provider configured (Kokoro through HyperFrames, ElevenLabs, or any local command such as Piper or Chatterbox), the director generates the voiceover and lengthens scenes to fit it. Music ducks automatically under narration.
 - **Generated footage (optional).** Point `GENVIDEO_COMMAND` at a text/image-to-video model (for example a Wan 2.2 or LTX-2 script, or a ComfyUI workflow) and the director can fill gaps with generated clips, labelled as AI-generated.
-- **Edit by hand too.** The studio has a storyboard strip and a scene editor (text, duration, media, motion, transition, voiceover, order), so you can work without the AI at all.
-- **Render.** Draft, standard and high quality MP4 renders run in a queue with live progress, cancellation and downloads. Formats: 9:16, 16:9, 1:1, 4:5 at 24/30/60 fps.
+- **Cinematic finish.** A film look for the whole video:
+  - colour grades: cinematic, noir, warm, cool, vivid or matte
+  - film grain and vignette
+  - 2.39:1 letterbox for 16:9, with text kept inside the bars
+  - camera moves, including slow dolly-in, crash-zoom and drift
+  - flash and whip transitions
+- **Edit by hand too.** The studio has a storyboard strip of real frame thumbnails with timecode, a film-look bar, and a scene editor (text, duration, media, motion, transition, voiceover, order), so you can work without the AI at all. Keyboard: Space plays, ← → move between scenes, Esc closes the editor.
+- **Light and dark.** White, black and lime by default, plus a dark studio; the preview stage stays dark in both, like a screening room.
+- **Render.** Draft, standard, high and 4K master renders run in a queue with live progress, cancellation and downloads. Formats: 9:16, 16:9, 1:1, 4:5 at 24/30/60 fps; 4K is available for 9:16, 16:9 and 1:1.
 
 ## Use it from Claude (connector and plugin)
 
@@ -115,6 +124,7 @@ If HyperFrames can't find a browser, set `HYPERFRAMES_BROWSER_PATH` to a Chrome/
 | `PORT` / `HOST` | `4321` / `127.0.0.1` | Where the studio listens. |
 | `DIRECTOR_DATA_DIR` | `~/Director` | Projects, uploads, builds and renders. |
 | `DIRECTOR_UI` | on | `off` stops the connector from also serving the studio page. |
+| `DIRECTOR_THUMBNAILS` | on | `off` stops the frame thumbnails made in the background after each save. |
 | `DIRECTOR_IMPORT_ROOTS` | (any) | Folders the connector may import from, separated like `PATH`. Hidden files and folders are always refused. |
 | `DIRECTOR_MCP_TOKEN` | (none) | Bearer token for `/mcp`. Required when the studio listens on a non-local address. |
 | `DIRECTOR_ALLOWED_HOSTS` | (none) | Extra host names the studio answers to besides localhost (DNS-rebinding protection). |

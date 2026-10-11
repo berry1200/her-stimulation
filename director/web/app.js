@@ -48,9 +48,9 @@ async function api(method, url, body) {
 function toast(text, bad = false) {
   banner.textContent = text;
   banner.hidden = false;
-  banner.style.background = bad ? "#2a1012" : "";
+  banner.classList.toggle("bad", bad);
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => (banner.hidden = !health || health.claude ? true : banner.hidden), 6000);
+  toast.t = setTimeout(() => (banner.hidden = true), 6000);
 }
 
 // ── routing ──
@@ -93,10 +93,15 @@ async function showHome() {
         h("h1", {}, "Your videos"),
         h("p", { class: "lead" }, "Bring images, footage, documents or a script. The director plans, voices, edits and renders the video with you."),
         projects.length
-          ? h("div", { class: "project-list" }, ...projects.map((p) =>
-              h("a", { class: "card project-item", href: `/p/${p.id}`, onclick: (e) => { e.preventDefault(); go(`/p/${p.id}`); } },
-                h("div", {}, h("div", {}, p.name), h("div", { class: "meta" }, `${p.format} · ${p.scenes} scenes · ${p.assets} assets`)),
-                h("div", { class: "meta" }, new Date(p.updatedAt).toLocaleString()))))
+          ? h("div", { class: "project-grid" }, ...projects.map((p) => {
+              const cover = h("div", { class: "cover" }, h("span", { class: "fmt" }, p.format), p.seconds ? h("span", { class: "len" }, `${Math.round(p.seconds)}s`) : null);
+              if (p.cover) cover.style.backgroundImage = `url("${p.cover}")`;
+              return h("a", { class: "project-card", href: `/p/${p.id}`, onclick: (e) => { e.preventDefault(); go(`/p/${p.id}`); } },
+                cover,
+                h("div", { class: "info" },
+                  h("div", { class: "name" }, p.name),
+                  h("div", { class: "meta" }, `${p.scenes} scenes · ${p.assets} assets · ${new Date(p.updatedAt).toLocaleDateString()}`)));
+            }))
           : h("div", { class: "empty" }, "No videos yet. Create your first one.")),
       h("div", { class: "card" },
         h("h2", { style: "margin:0 0 6px;font-size:16px" }, "New video"),
@@ -140,6 +145,11 @@ function subscribe(id) {
   };
   events.addEventListener("plan", refresh);
   events.addEventListener("assets", refresh);
+  events.addEventListener("thumbs", async () => {
+    const data = await api("GET", `/api/projects/${id}`);
+    state.project.thumbs = data.project.thumbs;
+    renderStage();
+  });
   events.addEventListener("render", (e) => {
     const r = JSON.parse(e.data);
     const rec = state.project.renders.find((x) => x.id === r.id);
@@ -154,7 +164,7 @@ const refs = {};
 function renderStudio() {
   const p = state.project;
   titleEl.textContent = `${p.name} · ${p.format}`;
-  const quality = h("select", { style: "width:auto" }, h("option", { value: "draft" }, "Draft"), h("option", { value: "standard", selected: true }, "Standard"), h("option", { value: "high" }, "High"));
+  const quality = h("select", { style: "width:auto" }, h("option", { value: "draft" }, "Draft"), h("option", { value: "standard", selected: true }, "Standard"), h("option", { value: "high" }, "High"), h("option", { value: "4k" }, "4K master"));
   actionsEl.replaceChildren(
     quality,
     h("button", { class: "btn primary", onclick: async () => {
@@ -188,7 +198,7 @@ function renderStudio() {
         h("div", { class: "composer" },
           input,
           h("div", { style: "display:flex;justify-content:space-between;align-items:center" },
-            h("span", { class: "hint" }, health && !health.claude ? "AI director needs ANTHROPIC_API_KEY" : "Ctrl/⌘ + Enter to send"),
+            h("span", { class: "hint" }, health && !health.claude ? "Chat needs ANTHROPIC_API_KEY, or direct from Claude with the connector" : "Ctrl/⌘ + Enter to send"),
             send)))));
   renderAssets();
   renderRenders();
@@ -309,7 +319,11 @@ function renderStage() {
     });
     player.addEventListener("error", (e) => toast(`Preview: ${e.detail?.message ?? "failed to load"}`, true));
     refs.below = h("div");
-    refs.stage.replaceChildren(h("div", { class: "player-wrap" }, h("div", { class: "player-box", style: `--ar:${(w / hgt).toFixed(4)}` }, refs.player)), refs.below);
+    const total = plan.scenes.reduce((sum, s) => sum + s.duration, 0);
+    const meta = h("div", { class: "stage-meta" },
+      h("span", {}, h("b", {}, "PREVIEW"), `  ${plan.format} · ${w}×${hgt} · ${plan.fps} fps · ${timecode(total, plan.fps)} · v${p.planVersion}`),
+      h("span", { class: "keys" }, "Space play/pause · ← → scenes · Esc close"));
+    refs.stage.replaceChildren(h("div", { class: "player-wrap" }, meta, h("div", { class: "player-box", style: `--ar:${(w / hgt).toFixed(4)}` }, refs.player)), refs.below);
     refs.playerSrc = src;
     const selected = sceneStart(plan, state.selected);
     if (selected !== null) refs.seekOnReady = selected;
@@ -319,13 +333,51 @@ function renderStage() {
   const strip = h("div", { class: "strip" }, ...plan.scenes.map((s) => {
     const start = t;
     t += s.duration;
+    const thumb = p.thumbs?.files?.[s.id];
+    const shot = h("div", { class: "shot" }, h("span", { class: "tc" }, timecode(start, plan.fps)));
+    if (thumb) shot.style.backgroundImage = `url("${fileUrl(thumb)}")`;
     return h("button", { class: `scene${state.selected === s.id ? " selected" : ""}`, onclick: () => selectScene(s.id) },
-      h("div", { class: "k" }, s.kind),
-      h("div", { class: "t" }, s.heading || s.body || s.items?.[0] || assetName(s.media?.assetId) || s.id),
-      h("div", { class: "d" }, `${start.toFixed(1)}s · ${s.duration}s`));
+      shot,
+      h("div", { class: "meta" },
+        h("div", { class: "k" }, s.kind),
+        h("div", { class: "t" }, s.heading || s.body || s.items?.[0] || assetName(s.media?.assetId) || s.id),
+        h("div", { class: "d" }, `${s.duration}s${s.transition ? ` · ${s.transition} in` : ""}`)));
   }), h("button", { class: "scene add", title: "Add a scene", onclick: addScene }, "+ Scene"));
   const editor = state.selected ? sceneEditor(plan.scenes.find((s) => s.id === state.selected)) : null;
-  refs.below.replaceChildren(...[strip, editor].filter(Boolean));
+  refs.below.replaceChildren(...[lookBar(plan), strip, editor].filter(Boolean));
+}
+
+/** HH:MM:SS:FF timecode, as editors show it. */
+function timecode(seconds, fps) {
+  const total = Math.round(seconds * fps);
+  const f = total % fps;
+  const s = Math.floor(total / fps);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}:${pad(f)}`;
+}
+
+const GRADES = [["none", "No grade"], ["cinematic", "Cinematic"], ["noir", "Noir"], ["warm", "Warm film"], ["cool", "Cool"], ["vivid", "Vivid"], ["matte", "Matte"]];
+
+/** Film finish for the whole video: grade, grain, vignette, letterbox. */
+function lookBar(plan) {
+  const look = plan.style.look || {};
+  const update = async (changes) => {
+    const next = structuredClone(state.project.plan);
+    next.style.look = { ...(next.style.look || {}), ...changes };
+    for (const [k, v] of Object.entries(next.style.look)) if (v === false || v === 0 || v === "none") delete next.style.look[k];
+    if (!Object.keys(next.style.look).length) delete next.style.look;
+    await savePlan(next);
+  };
+  const grade = h("select", { "aria-label": "Colour grade", onchange: () => update({ grade: grade.value }) },
+    ...GRADES.map(([v, label]) => h("option", { value: v, selected: (look.grade || "none") === v }, label)));
+  const chip = (label, on, onclick, disabled) => h("button", { class: "chip", "aria-pressed": on ? "true" : "false", onclick, disabled, title: disabled || undefined }, label);
+  const landscape = plan.format === "16:9";
+  return h("div", { class: "lookbar" },
+    h("span", { class: "lbl" }, "Look"),
+    grade,
+    chip("Film grain", !!look.grain, () => update({ grain: look.grain ? 0 : 0.6 })),
+    chip("Vignette", !!look.vignette, () => update({ vignette: look.vignette ? 0 : 0.6 })),
+    chip("Letterbox 2.39:1", !!look.letterbox, () => update({ letterbox: !look.letterbox }), landscape ? undefined : "Letterbox needs a 16:9 video"));
 }
 
 /** A moment shortly into the scene (after its entrance motion), or null if it is not in the plan. */
@@ -446,13 +498,58 @@ function renderFeed() {
 }
 
 // ── boot ──
+// ── theme: light by default, dark on request (remembered per browser) ──
+const themeBtn = document.getElementById("theme-toggle");
+function applyTheme(theme) {
+  if (theme === "dark") document.documentElement.dataset.theme = "dark";
+  else delete document.documentElement.dataset.theme;
+  themeBtn.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  themeBtn.title = themeBtn.getAttribute("aria-label");
+  // SVG elements have no .hidden property, so set the attribute directly.
+  themeBtn.querySelector(".sun").toggleAttribute("hidden", theme !== "dark");
+  themeBtn.querySelector(".moon").toggleAttribute("hidden", theme === "dark");
+}
+let theme = "light";
+try {
+  theme = localStorage.getItem("director-theme") === "dark" ? "dark" : "light";
+} catch {
+  /* storage can be unavailable */
+}
+applyTheme(theme);
+themeBtn.addEventListener("click", () => {
+  theme = theme === "dark" ? "light" : "dark";
+  applyTheme(theme);
+  try {
+    localStorage.setItem("director-theme", theme);
+  } catch {
+    /* ignore */
+  }
+});
+
+// ── keyboard: Space plays, arrows step through scenes, Esc closes the editor ──
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || !state.project?.plan) return;
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || document.activeElement?.isContentEditable) return;
+  const scenes = state.project.plan.scenes;
+  if (e.key === " " && refs.player) {
+    e.preventDefault();
+    if (refs.player.paused) refs.player.play();
+    else refs.player.pause();
+  } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+    e.preventDefault();
+    const i = scenes.findIndex((s) => s.id === state.selected);
+    const next = e.key === "ArrowRight" ? Math.min(scenes.length - 1, i + 1) : Math.max(0, i < 0 ? 0 : i - 1);
+    if (scenes[next] && scenes[next].id !== state.selected) selectScene(scenes[next].id);
+  } else if (e.key === "Escape" && state.selected) {
+    state.selected = null;
+    renderStage();
+  }
+});
+
 (async () => {
   try {
     health = await api("GET", "/api/health");
-    if (!health.claude) {
-      banner.textContent = "The chat on this page needs ANTHROPIC_API_KEY. Claude can still direct this studio through the Director connector (Claude Code or Claude Desktop), and you can edit by hand.";
-      banner.hidden = false;
-    }
   } catch {
     /* the studio still works without health info */
   }
