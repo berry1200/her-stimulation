@@ -20,6 +20,7 @@ const FormatSchema = z.enum(["9:16", "16:9", "1:1", "4:5"]);
 const CreateSchema = z.object({ name: z.string().max(120).default("Untitled video"), format: FormatSchema.default("9:16"), brief: z.string().max(4000).default("") });
 const PatchSchema = z.object({ name: z.string().max(120).optional(), brief: z.string().max(4000).optional(), format: FormatSchema.optional() });
 const ChatSchema = z.object({ message: z.string().min(1).max(8000) });
+const LinkSchema = z.object({ url: z.string().min(1).max(4000), note: z.string().max(300).optional() });
 const RenderSchema = z.object({ quality: z.enum(["draft", "standard", "high", "4k"]).default("standard") });
 /** Only these project sub-folders are served over HTTP. */
 const SERVED_DIRS = new Set(["assets", "previews", "renders", "build"]);
@@ -163,6 +164,18 @@ export async function createApp(config: Config): Promise<AppContext> {
       return c.json({ added, failed }, added.length ? 201 : 400);
     }),
   );
+
+  app.post("/api/projects/:id/assets/url", guard(async (c) => {
+    const id = await projectId(c);
+    const body = LinkSchema.parse(await c.req.json().catch(() => ({})));
+    try {
+      const asset = await studio.importFromUrl(id, body.url, { note: body.note });
+      await studio.feed(id, { role: "user", text: `Added ${asset.name} from a link` });
+      return c.json(asset, 201);
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  }));
 
   app.delete("/api/projects/:id/assets/:assetId", guard(async (c) => {
     const id = await projectId(c);

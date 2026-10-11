@@ -45,6 +45,10 @@ export interface Config {
   genVideo: { provider: string; command: string };
   /** Make a small frame per scene after each save, for the storyboard strip. */
   thumbnails: boolean;
+  /** Allow downloading files from http(s) links. */
+  urlImport: boolean;
+  /** Allow links to loopback and private network addresses (tests and trusted local setups only). */
+  allowPrivateUrls: boolean;
   /** Folders the Claude connector may import from (empty: any non-hidden path). */
   importRoots: string[];
   /** Bearer token required on /mcp; needed when the studio listens on a non-local address. */
@@ -80,6 +84,8 @@ export function loadConfig(): Config {
       command: env("GENVIDEO_COMMAND"),
     },
     thumbnails: env("DIRECTOR_THUMBNAILS", "on") !== "off",
+    urlImport: env("DIRECTOR_URL_IMPORT", "on") !== "off",
+    allowPrivateUrls: ["1", "true", "on"].includes(env("DIRECTOR_ALLOW_PRIVATE_URLS").toLowerCase()),
     importRoots: env("DIRECTOR_IMPORT_ROOTS").split(path.delimiter).map((r) => r.trim()).filter(Boolean).map((r) => path.resolve(r.replace(/^~(?=$|[\\/])/, os.homedir()))),
     mcpToken: env("DIRECTOR_MCP_TOKEN"),
     allowedHosts: list(env("DIRECTOR_ALLOWED_HOSTS")).map((h) => h.toLowerCase()),

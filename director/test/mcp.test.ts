@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import http from "node:http";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -30,7 +30,7 @@ describe("claude connector over stdio", { timeout: 300_000 }, () => {
     media = await makeMedia(await mkdtemp(path.join(os.tmpdir(), "mcp-media-")));
     const env: Record<string, string> = {};
     for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
-    Object.assign(env, { DIRECTOR_DATA_DIR: dataDir, DIRECTOR_UI: "off", TTS_PROVIDER: "none", GENVIDEO_PROVIDER: "none" });
+    Object.assign(env, { DIRECTOR_DATA_DIR: dataDir, DIRECTOR_UI: "off", TTS_PROVIDER: "none", GENVIDEO_PROVIDER: "none", DIRECTOR_ALLOW_PRIVATE_URLS: "1" });
     delete env.CLAUDE_PLUGIN_DATA;
     client = new Client({ name: "director-test", version: "1.0.0" });
     // The same launcher the plugin and Claude Desktop config run.
@@ -45,7 +45,7 @@ describe("claude connector over stdio", { timeout: 300_000 }, () => {
     assert.match(client.getInstructions() ?? "", /director_guide/);
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name);
-    for (const n of ["director_guide", "list_projects", "create_project", "import_files", "get_project", "view_assets", "note_asset", "save_plan", "edit_scene", "write_custom_scene", "preview", "generate_voiceover", "generate_clip", "render_video", "render_status", "save_render"]) {
+    for (const n of ["director_guide", "list_projects", "create_project", "import_files", "import_from_url", "get_project", "view_assets", "note_asset", "save_plan", "edit_scene", "write_custom_scene", "preview", "generate_voiceover", "generate_clip", "render_video", "render_status", "save_render"]) {
       assert.ok(names.includes(n), n);
     }
     const save = tools.find((t) => t.name === "save_plan")!;
@@ -73,6 +73,31 @@ describe("claude connector over stdio", { timeout: 300_000 }, () => {
     assert.match(imported.failed[1].error, /absolute/);
     const photo = imported.added.find((a: { kind: string }) => a.kind === "image").asset_id;
     const clip = imported.added.find((a: { kind: string }) => a.kind === "video").asset_id;
+
+    // A shot "generated" elsewhere comes in by link, with its note and source kept.
+    const cdn = http.createServer(async (req, res) => {
+      if (new URL(req.url ?? "/", "http://cdn").pathname === "/gen/shot-001.png") {
+        res.writeHead(200, { "content-type": "image/png" });
+        res.end(await readFile(media.photo!));
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+    await new Promise<void>((resolve) => cdn.listen(0, "127.0.0.1", resolve));
+    const cdnBase = `http://127.0.0.1:${(cdn.address() as { port: number }).port}`;
+    const linked = jsonOf(await client.callTool({ name: "import_from_url", arguments: { project_id: pid, files: [
+      { url: `${cdnBase}/gen/shot-001.png?sig=abc`, note: "AI-generated with Higgsfield: neon city at night" },
+      { url: `${cdnBase}/gen/missing.png` },
+    ] } }));
+    cdn.close();
+    assert.equal(linked.added.length, 1, JSON.stringify(linked));
+    assert.match(linked.failed[0].error, /HTTP 404/);
+    const state = jsonOf(await client.callTool({ name: "get_project", arguments: { project_id: pid } }));
+    const shot = state.assets.find((a: { id: string }) => a.id === linked.added[0].asset_id);
+    assert.equal(shot.origin, "link");
+    assert.equal(shot.source, `${cdnBase}/gen/shot-001.png`); // query string (often an access token) dropped
+    assert.match(shot.description, /AI-generated/);
 
     const viewed = await client.callTool({ name: "view_assets", arguments: { project_id: pid, asset_ids: [photo] } });
     assert.ok(contentOf(viewed).some((c) => c.type === "image" && c.mimeType === "image/jpeg"));

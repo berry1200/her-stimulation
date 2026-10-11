@@ -120,6 +120,8 @@ label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px
 .dropzone { border: 1.5px dashed var(--line-strong); border-radius: var(--radius); padding: 16px; text-align: center; color: var(--muted); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 .dropzone:hover { border-color: var(--text); }
 .dropzone.drag { border-color: var(--accent-ink); color: var(--text); background: var(--banner-bg); }
+.linkrow { display: flex; gap: 6px; margin-top: 8px; }
+.linkrow input { min-width: 0; flex: 1; font-size: 12px; padding: 6px 9px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; }
 .assets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
 .asset { position: relative; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .asset .thumb { aspect-ratio: 1; background: var(--stage) center/cover no-repeat; display: grid; place-items: center; color: var(--muted); font-size: 12px; }

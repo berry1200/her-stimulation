@@ -252,7 +252,25 @@ function renderAssets() {
         h("div", { class: "kind" }, [a.kind, a.duration ? `${a.duration.toFixed(1)}s` : "", a.width ? `${a.width}×${a.height}` : "", a.origin !== "upload" ? a.origin : ""].filter(Boolean).join(" · ")),
         a.description ? h("div", { class: "desc" }, a.description) : null));
   }));
-  refs.assets.replaceChildren(zone, grid);
+  const link = h("input", { type: "url", placeholder: "Or paste a link to a file", "aria-label": "Link to an image, video or audio file" });
+  const addLink = h("button", { class: "btn small", type: "submit" }, "Add");
+  const linkForm = h("form", { class: "linkrow", onsubmit: async (e) => {
+    e.preventDefault();
+    const url = link.value.trim();
+    if (!url) return;
+    addLink.disabled = true;
+    toast("Downloading…");
+    try {
+      await api("POST", `/api/projects/${p.id}/assets/url`, { url });
+      link.value = "";
+      banner.hidden = true;
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      addLink.disabled = false;
+    }
+  } }, link, addLink);
+  refs.assets.replaceChildren(zone, linkForm, grid);
 }
 
 async function upload(files) {

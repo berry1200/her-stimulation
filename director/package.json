@@ -27,6 +27,7 @@
     "hono": "^4.13.13",
     "hyperframes": "0.8.145",
     "tsx": "^4.23.15",
+    "undici": "^7.30.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

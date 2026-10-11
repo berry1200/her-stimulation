@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
+import http from "node:http";
 import { mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -66,6 +67,22 @@ describe("http api", { timeout: 300_000 }, () => {
     assert.equal(up.json.added.length, 3);
     assert.equal(up.json.failed.length, 1);
     const photo = up.json.added.find((a: { kind: string }) => a.kind === "image");
+
+    // Files can also come in from a link (the studio's "Add from link" field).
+    const cdn = http.createServer(async (_req, res) => {
+      res.writeHead(200, { "content-type": "image/png" });
+      res.end(await readFile(media.photo!));
+    });
+    await new Promise<void>((resolve) => cdn.listen(0, "127.0.0.1", resolve));
+    const linked = await call("POST", `/api/projects/${id}/assets/url`, { url: `http://127.0.0.1:${(cdn.address() as { port: number }).port}/still.png` });
+    cdn.close();
+    assert.equal(linked.status, 201, JSON.stringify(linked.json));
+    assert.equal(linked.json.origin, "link");
+    const badLink = await call("POST", `/api/projects/${id}/assets/url`, { url: "file:///etc/passwd" });
+    assert.equal(badLink.status, 400);
+    assert.match(badLink.json.error, /only http and https/);
+    // Remove it again so the starter cut below sees the same uploads as before.
+    assert.equal((await call("DELETE", `/api/projects/${id}/assets/${linked.json.id}`)).status, 200);
 
     const starter = await call("POST", `/api/projects/${id}/plan/starter`);
     assert.equal(starter.status, 200, JSON.stringify(starter.json));

@@ -62,6 +62,12 @@ Writes are atomic: the file is written to a temp path and renamed into place. A 
 - Images and video are probed with ffprobe, including rotation.
 - Video in codecs browsers can't play (anything except H.264, VP8, VP9 or AV1) is transcoded to H.264 MP4. Videos get six keyframes.
 - PDFs get page previews and text via poppler. DOCX, HTML, Markdown, SRT and VTT become plain text, with HTML scripts stripped. Text is capped at 60k characters.
+- Links (`download.ts`) are fetched with undici:
+  - only public addresses; loopback, private, link-local, CGNAT, multicast and reserved ranges are refused, IPv4-mapped and NAT64 forms included
+  - every redirect is checked again (at most 5)
+  - without a proxy, the connection is pinned to the checked address; with `HTTPS_PROXY` it goes through the proxy
+  - size and time limits apply
+  - the file name comes from the content type, and a web page is rejected with a hint to use the direct file link
 
 ## Compiler (`src/compile/`)
 
@@ -131,6 +137,7 @@ It also covers style (one idea per scene, readable text, facts only from the use
 - **Server:** built on the MCP SDK's low-level `Server`. It exposes the agent's ten tools, each with a required `project_id`, plus:
   - `director_guide`, `list_projects`, `create_project`
   - `import_files`: local paths; hidden paths refused, symlinks resolved first, optionally limited to `DIRECTOR_IMPORT_ROOTS`
+  - `import_from_url` (shared with the built-in agent): direct file links, for example shots generated with Higgsfield in the same Claude conversation
   - `render_status`: long-polls up to 55s; `save_render`: copies the MP4 without overwriting by default
   - a `make_video` prompt
 - **Results:** converted to MCP content, text and images. PDFs go as text plus page images rather than document blocks.

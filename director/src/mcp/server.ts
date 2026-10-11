@@ -33,7 +33,8 @@ export interface ConnectorContext {
 
 const INSTRUCTIONS = `Director is a local AI video studio that renders with HyperFrames. With these tools you direct the edit: plan the storyboard, write narration, choose shots and trims, design motion graphics, check frames and render MP4s.
 Before planning a video, call director_guide once for the full workflow, scene types and custom-scene rules.
-Typical flow: list_projects or create_project (share the studio link: it shows a live preview), import_files, get_project and view_assets, save_plan, preview and fix with edit_scene, then render_video, render_status and save_render when the user approves.`;
+Typical flow: list_projects or create_project (share the studio link: it shows a live preview), import_files or import_from_url, get_project and view_assets, save_plan, preview and fix with edit_scene, then render_video, render_status and save_render when the user approves.
+Shots generated with another connector (such as Higgsfield) come in through import_from_url with their direct file links.`;
 
 const READ_ONLY = new Set(["director_guide", "list_projects", "get_project", "view_assets", "preview", "render_status"]);
 

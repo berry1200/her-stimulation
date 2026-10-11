@@ -28,7 +28,9 @@ export interface Asset {
   previews?: string[];
   /** One-line description written by the director after looking at the asset. */
   description?: string;
-  origin: "upload" | "voiceover" | "generated";
+  origin: "upload" | "voiceover" | "generated" | "link";
+  /** Where a linked file came from (scheme, host and path; query strings are dropped as they often hold access tokens). */
+  source?: string;
   createdAt: string;
 }
 

@@ -21,7 +21,7 @@ upload  ─►  ingest (probe, transcode, keyframes, text)  ─►  AI director 
 - **Chat with the director.** Describe the video you want. The director looks at your material, writes the full storyboard (scenes, on-screen text, narration, transitions, music), previews the result and fixes what it sees. Follow-up messages make targeted edits.
 - **Scene templates.** Title, statement (word-by-word reveal), media (full-bleed photo or clip with Ken Burns motion and trims), list, animated stat counter, quote, call to action, and **custom** scenes where the director writes its own HTML/CSS motion graphics. Custom scenes are sandboxed: no scripts, no remote URLs.
 - **Voice and captions.** Narration per scene becomes timed captions. With a voice provider configured (Kokoro through HyperFrames, ElevenLabs, or any local command such as Piper or Chatterbox), the director generates the voiceover and lengthens scenes to fit it. Music ducks automatically under narration.
-- **Generated footage (optional).** Point `GENVIDEO_COMMAND` at a text/image-to-video model (for example a Wan 2.2 or LTX-2 script, or a ComfyUI workflow) and the director can fill gaps with generated clips, labelled as AI-generated.
+- **Generated footage (optional).** Shots made with an AI video tool come in by link with `import_from_url`. In Claude Desktop or Claude Code with the Higgsfield connector, Claude can generate a shot there and drop it straight into the edit. You can also point `GENVIDEO_COMMAND` at your own text/image-to-video model (for example a Wan 2.2 or LTX-2 script, or a ComfyUI workflow). Generated shots are labelled as AI-generated.
 - **Cinematic finish.** A film look for the whole video:
   - colour grades: cinematic, noir, warm, cool, vivid or matte
   - film grain and vignette
@@ -84,6 +84,7 @@ Run `npm install && npm run setup` in `director/`. Then open Settings → Develo
 | `director_guide` | The full workflow, scene kinds, style and motion-graphics rules |
 | `list_projects`, `create_project` | Find or start a video; returns the studio link |
 | `import_files` | Bring in local images, video, audio, documents, scripts and fonts by path |
+| `import_from_url` | Download files from direct http(s) links, such as shots generated with Higgsfield |
 | `get_project`, `view_assets`, `note_asset` | Read the project and look at the material (pictures and keyframes) |
 | `save_plan`, `edit_scene`, `write_custom_scene` | Write and change the storyboard and custom motion graphics |
 | `preview` | Real frames from the cut, so Claude can check its work |
@@ -125,6 +126,8 @@ If HyperFrames can't find a browser, set `HYPERFRAMES_BROWSER_PATH` to a Chrome/
 | `DIRECTOR_DATA_DIR` | `~/Director` | Projects, uploads, builds and renders. |
 | `DIRECTOR_UI` | on | `off` stops the connector from also serving the studio page. |
 | `DIRECTOR_THUMBNAILS` | on | `off` stops the frame thumbnails made in the background after each save. |
+| `DIRECTOR_URL_IMPORT` | on | `off` turns off downloading files from links. |
+| `DIRECTOR_ALLOW_PRIVATE_URLS` | off | `1` allows links to this computer or a private network (for testing only). |
 | `DIRECTOR_IMPORT_ROOTS` | (any) | Folders the connector may import from, separated like `PATH`. Hidden files and folders are always refused. |
 | `DIRECTOR_MCP_TOKEN` | (none) | Bearer token for `/mcp`. Required when the studio listens on a non-local address. |
 | `DIRECTOR_ALLOWED_HOSTS` | (none) | Extra host names the studio answers to besides localhost (DNS-rebinding protection). |
@@ -169,6 +172,7 @@ The UI uses a small JSON API, so other tools can drive the studio too:
 | `GET/POST` | `/api/projects` | List or create (`{name, format, brief}`). |
 | `GET/PATCH/DELETE` | `/api/projects/:id` | Project, activity feed and agent state. |
 | `POST` | `/api/projects/:id/assets` | Multipart upload, field `files`. |
+| `POST` | `/api/projects/:id/assets/url` | Download a file from a link (`{url, note}`). |
 | `DELETE` | `/api/projects/:id/assets/:assetId` | Refused while the storyboard uses the asset. |
 | `PUT` | `/api/projects/:id/plan` | Replace the storyboard (validated, compiled, linted). |
 | `POST` | `/api/projects/:id/plan/starter` | First cut from the uploads. |
@@ -193,6 +197,7 @@ The agent test drives the full director loop (view assets, note, save plan, prev
 
 - The studio is a single-user local tool. It binds to `127.0.0.1` and has no login. Put it behind authentication before exposing it to a network. While it listens locally, it only answers requests addressed to localhost, so web pages can't reach it through DNS rebinding.
 - The connector's `import_files` reads only the paths Claude passes, refuses hidden files and folders such as `~/.ssh` (symlinks are resolved first), and can be limited to chosen folders with `DIRECTOR_IMPORT_ROOTS`.
+- Link imports (`import_from_url` and the studio's link field) download only from public internet addresses. Links to this computer or a private network are refused, and every redirect is checked again. Without a proxy, the connection is pinned to the address that was checked. Downloads are capped in size and time, a link must return a file type Director can use, and the stored source keeps no query string (signed links often carry access tokens). `DIRECTOR_URL_IMPORT=off` turns link import off.
 - Uploads are allowlisted by type and stored under generated ids. File serving is limited to assets, previews, builds and renders, and path traversal is rejected.
 - Custom-scene HTML written by the model is validated before use. Scripts, embedded documents, forms and event handlers are rejected, including entity-encoded tricks. URLs are allowlisted (asset placeholders, `#fragments`, data-URI images), CSS must be scoped to its scene, and timing must fit the scene.
 - External tools run with `execFile` and argv templates, never through a shell.

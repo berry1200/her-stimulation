@@ -48,6 +48,33 @@ export function toolDefinitions(): Anthropic.Beta.BetaTool[] {
       },
     },
     {
+      name: "import_from_url",
+      description:
+        "Download files from http(s) links into the project: images, video, audio, PDFs or fonts. Use it for shots generated in another tool (such as Higgsfield) or files the user links to. Use the direct link to the file, not a web page. Give each AI-generated file a note that says so, with its prompt. Up to 10 links per call.",
+      input_schema: {
+        type: "object",
+        properties: {
+          files: {
+            type: "array",
+            minItems: 1,
+            maxItems: 10,
+            items: {
+              type: "object",
+              properties: {
+                url: { type: "string", description: "Direct http(s) link to the file." },
+                name: { type: "string", description: "Optional file name to show in the studio." },
+                note: { type: "string", maxLength: 300, description: "What the file is, e.g. 'AI-generated with Higgsfield: slow dolly over a neon city at night'." },
+              },
+              required: ["url"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["files"],
+        additionalProperties: false,
+      },
+    },
+    {
       name: "save_plan",
       description:
         "Replace the whole storyboard. The plan is validated, compiled to HyperFrames and linted; it is saved only if all of that passes, otherwise the errors are returned to fix. Returns the scene timeline and any layout warnings. Colours are 6-digit hex; fonts are sans, serif, mono, rounded or asset:<font asset id>; durations are seconds.",
@@ -130,6 +157,7 @@ export function toolDefinitions(): Anthropic.Beta.BetaTool[] {
 
 const ViewInput = z.object({ asset_ids: z.array(z.string()).min(1).max(4) });
 const NoteInput = z.object({ asset_id: z.string(), description: z.string().max(300) });
+const UrlInput = z.object({ files: z.array(z.object({ url: z.string().min(1).max(4000), name: z.string().max(200).optional(), note: z.string().max(300).optional() })).min(1).max(10) });
 const PlanInput = z.object({ plan: z.unknown() });
 const EditInput = z.object({ scene_id: z.string(), changes: z.record(z.string(), z.unknown()).optional(), delete: z.boolean().optional() });
 const CustomInput = z.object({ scene_id: z.string(), html: z.string().max(60000) });
@@ -199,6 +227,25 @@ export async function runTool(studio: Studio, projectId: string, name: string, i
           }
         }
         return { content: blocks, summary: `Looked at ${asset_ids.length} asset${asset_ids.length > 1 ? "s" : ""}` };
+      }
+
+      case "import_from_url": {
+        const { files } = parse(UrlInput, input);
+        const added: Array<Record<string, unknown>> = [];
+        const failed: Array<{ url: string; error: string }> = [];
+        for (const f of files) {
+          try {
+            const a = await studio.importFromUrl(projectId, f.url, { name: f.name, note: f.note });
+            added.push({ asset_id: a.id, name: a.name, kind: a.kind, ...(a.width ? { size: `${a.width}x${a.height}` } : {}), ...(a.duration ? { seconds: a.duration } : {}), ...(a.hasAudio !== undefined ? { hasAudio: a.hasAudio } : {}) });
+          } catch (err) {
+            failed.push({ url: f.url.slice(0, 200), error: (err as Error).message });
+          }
+        }
+        return {
+          content: json({ added, failed }),
+          isError: added.length === 0,
+          summary: added.length ? `Imported ${added.map((a) => a.name).join(", ")} from ${added.length === 1 ? "a link" : "links"}` : `Link import failed: ${failed[0]?.error ?? "no files"}`,
+        };
       }
 
       case "note_asset": {

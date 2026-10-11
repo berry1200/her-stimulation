@@ -10,7 +10,7 @@ const run = promisify(execFile);
 
 export async function tempConfig(): Promise<Config> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "director-test-"));
-  return { ...loadConfig(), dataDir: dir, tts: { ...loadConfig().tts, provider: "none" }, genVideo: { provider: "none", command: "" }, thumbnails: false };
+  return { ...loadConfig(), dataDir: dir, tts: { ...loadConfig().tts, provider: "none" }, genVideo: { provider: "none", command: "" }, thumbnails: false, allowPrivateUrls: true };
 }
 
 export async function makeMedia(dir: string): Promise<Record<string, string>> {

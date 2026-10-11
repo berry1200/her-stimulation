@@ -18,7 +18,8 @@ const STUDIO = `## How the studio works
 - Film finish: plan.style.look applies to the whole video: grade (cinematic, noir, warm, cool, vivid, matte), grain and vignette (0-1), and letterbox (2.39:1 bars, 16:9 only).
 - Narration goes in scene.voiceover; captions are generated from it. If a voice provider is available, generate_voiceover turns the lines into audio and lengthens scenes that are too short for their line. Without one, the narration still shows as captions and the user can upload a recording (set voiceoverAssetId to it).
 - Music: plan.music uses an uploaded audio asset and is automatically quieter under narration.
-- Asset ids look like a_xxxxxxxx. Use only ids that exist in the project state.`;
+- Asset ids look like a_xxxxxxxx. Use only ids that exist in the project state.
+- import_from_url downloads files from http(s) links, such as shots generated in another tool or files the user links to. It needs the direct link to the file, not a web page. Give AI-generated files a note that says so, with the prompt.`;
 
 const WORKFLOW = `## How to work
 1. Understand the request and the material. Look at images, footage keyframes and documents with view_assets before deciding how to use them, then record what you saw with note_asset so later turns don't need to look again.
@@ -53,6 +54,7 @@ const CONNECTOR = `## Working through the Director connector
 - You are the director here: the tools below act on a local Director studio. Every project tool takes project_id; find it with list_projects or create one with create_project.
 - Bring material in with import_files (absolute paths or ~/ paths the user gives you), or ask the user to drop files into the studio page. Then use get_project and view_assets.
 - Share the studio link from create_project or list_projects: it shows a live preview that updates after every save, so the user can watch and edit alongside you.
+- AI-generated shots: if this conversation also has an image or video generation connector (for example Higgsfield), you can create shots there to fill gaps in the user's material. Agree the cost with the user first, match the video's format (vertical shots for a 9:16 video) and look, then bring each result in with import_from_url using the direct file link and a note that it is AI-generated, with its prompt. Tell the user which shots are generated.
 - render_video starts a render in the background. Check it with render_status (it can wait up to 55 seconds per call), then give the user the file path or copy it where they want with save_render.`;
 
 /** Full guide for an outside model driving the studio through MCP (the director_guide tool and make_video prompt). */

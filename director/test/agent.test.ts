@@ -84,7 +84,7 @@ describe("director agent loop", { timeout: 240_000 }, () => {
     assert.match(String(first.headers["anthropic-beta"]), /server-side-fallback-2026-07-01/);
     assert.equal(first.body.output_config?.effort, "high");
     assert.deepEqual(first.body.system?.[0]?.cache_control, { type: "ephemeral" });
-    assert.equal(first.body.tools?.length, 10);
+    assert.equal(first.body.tools?.length, 11);
 
     // History is append-only: earlier assistant turns come back unchanged, thinking signatures included.
     const last = mock.requests[mock.requests.length - 1]!.body.messages;

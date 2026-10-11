@@ -8,6 +8,7 @@ import { checkCustomHtml } from "./compile/custom.ts";
 import { compileProject, sceneCompositionId, type CompileResult } from "./compile/compiler.ts";
 import { round } from "./compile/text.ts";
 import type { EventBus } from "./events.ts";
+import { downloadFile } from "./ingest/download.ts";
 import { ingestFile } from "./ingest/ingest.ts";
 import { probe } from "./ingest/media.ts";
 import { execFile } from "node:child_process";
@@ -91,6 +92,19 @@ export class Studio {
   // ── Assets ──
   async addAsset(projectId: string, name: string, data: Uint8Array, origin: Asset["origin"] = "upload"): Promise<Asset> {
     const asset = await ingestFile(this.store.dir(projectId), name, data, origin);
+    await this.store.update(projectId, (p) => void p.assets.push(asset));
+    this.bus.publish(projectId, { type: "assets" });
+    return asset;
+  }
+
+  /** Download a file from an http(s) link (for example a shot generated in another tool) and add it. */
+  async importFromUrl(projectId: string, url: string, opts: { name?: string; note?: string } = {}): Promise<Asset> {
+    if (!this.config.urlImport) throw new Error("importing from links is turned off (DIRECTOR_URL_IMPORT=off)");
+    const file = await downloadFile(url, { maxBytes: this.config.maxUploadBytes, allowPrivate: this.config.allowPrivateUrls, name: opts.name });
+    const asset = await ingestFile(this.store.dir(projectId), file.name, file.data, "link");
+    asset.source = `${file.url.protocol}//${file.url.host}${file.url.pathname}`;
+    const note = opts.note?.trim();
+    if (note) asset.description = note.slice(0, 300);
     await this.store.update(projectId, (p) => void p.assets.push(asset));
     this.bus.publish(projectId, { type: "assets" });
     return asset;
@@ -458,6 +472,7 @@ export class Studio {
         ...(a.kind === "video" ? { hasAudio: Boolean(a.hasAudio) } : {}),
         ...(a.text ? { textChars: a.text.length } : {}),
         ...(a.description ? { description: a.description } : {}),
+        ...(a.source ? { source: a.source } : {}),
       })),
       plan: p.plan ?? null,
       customScenes: Object.keys(p.customScenes),
