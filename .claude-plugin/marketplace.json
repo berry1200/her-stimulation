@@ -1,0 +1,15 @@
+{
+  "name": "her-stimulation",
+  "owner": {
+    "name": "berry1200",
+    "url": "https://github.com/berry1200"
+  },
+  "description": "Director, an AI video studio that Claude drives through a connector.",
+  "plugins": [
+    {
+      "name": "video-director",
+      "source": "./director",
+      "description": "AI video studio for Claude: plan, edit, animate, voice and render videos from your images, footage, documents and scripts."
+    }
+  ]
+}
